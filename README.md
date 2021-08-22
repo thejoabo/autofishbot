@@ -7,13 +7,16 @@ Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com
 - **Anti-bot Bypass** (Captcha bypass) [[INFORMATION]](https://github.com/thejoabo/virtualfisher-bot#captcha-information)
 - Auto Buff (more treasures + more fish)
 
+## Demonstration
+![screen-gif](./demonstration.gif)
+
 ## Dependencies
 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install all required dependencies (please, check if you already have it).
 
 ```bash
 pip install requests
-pip install \time
+pip install time
 pip install random
 pip install websocket-client
 pip install json
@@ -172,5 +175,5 @@ So I decided to do a pre-process using an simple AI with weights (like blur, con
 
 ## Contributing
 - Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-- Any errors, bugs, strange behavior **[OPEN AN ISSUE](https://github.com/thejoabo/virtualfisher-bot/issues/new)** containing a screenshot or describing the issue.
+- Any errors, bugs, strange behavior **[PLEASE OPEN AN ISSUE](https://github.com/thejoabo/virtualfisher-bot/issues/new)** containing a screenshot or describing the issue.
 
