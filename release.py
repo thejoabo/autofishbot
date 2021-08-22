@@ -1,86 +1,11 @@
-import requests
-import time
-import random
-import websocket
-import json
+import requests, websocket
+import time, random, json
 import threading
-import re
-import os
-import sys
-#-------------------- CHANGE HERE --------------------#
-
-#-------------------- IMPORTANT --------------------#
-#Change here the channel id that you pretend to play (otherwise the autofish won't "listen" the response)
-channelId = "Your channel id here"
-#Change here to your authorization token
-token = "Your authorization token here"
-
-#-------------------- PREFERENCES --------------------#
-#Your preference bait -> 'worms' / 'leeches' / 'magnet' / 'wise bait' / 'fish' / 'artifact magnet' / 'magic bait'
-bait = "Worms"
-#True / False -> Automaticaly buy fish'x'm, treasure'x'm, sell all your inventory and rebuy baits
-buffSwitch = True
-#Logs
-logCaptcha = False
-#For now, leave it in 'n' option, otherwise it breaks the script idk why yet
-logMode = 'n' # e -> emotes / f -> full / em -> embeds / ee -> embeds + emotes / n -> don't log
-#Your %f cooldown time
-cd = 3.5 
-#Change the buff 'x' variable -> 5 or 20 (this will be used in the buff autobuy)
-boostCd = 20 #in minutes
-#Your timezone in UTC format (like: -1 , 3 , 0 ...) -> this will be used to properly display message timestamps 
-timezone = 0
-
-
-#-------------------- DO NOT CHANGE THIS --------------------#
-#Default bot UID
-botUID = "574652751745777665"
-#Calculate how many times you can fish based in your cooldown time until you can buff again
-boostValue = round((boostCd*60)/cd)-10
-#Calculate how many baits is needed to resuply your last fishing session (last 'x' minutes where 'x' == boostCd)
-baitValue = round(boostValue*0.55)
-#This is important to randomize your fish time (you can change the '0.15' to 0 if you want, but you probably will get more captchas)
-margin = cd + 0.15
-#Default counters - DO NOT CHANGE
-streak, count, bypassCount = 0, 0, 0
-sendsA, sendsB, desyncs = 0, 0, 0
-#Clear the console
-clearConsole = lambda: os.system('cls' if os.name in ('nt', 'dos') else 'clear')
-#Channel API
-channel = "https://discord.com/api/v9/channels/"+channelId+"/messages"
-#Authorization token
-auth = {'authorization': token}
-#Emote list - is used to identify which emotes should be removed, you can add more if you want
-emoteList = ['<:chest_artifact:708049330921013271>','<:charm_white:702921289907830814>','<:charm_red:702916693264957501>','<:charm_cyan:702921275458453514>','<:charm_green:702918994465652817>','<:charm_yellow:702919046772817950>','<:charm_blue:702918982943899648>','<:charm_pink:702919025365352520>','<:fb_chest:625008684786909224>','<:chest_legendary:708049312919322651>','<:chest_epic:708049321882550364>','<:chest_uncommon:708057306507771954>','<:chest_rare:708049302131441727>','<:fb_goldfish:625461158475726861>','<:fb_emeraldfish:625462358411837441>','<:fb_diamondfish:625461188418994196>','<:fb_lavafish:659067000735137793>','<:charm_lblue:702919008478953483>']
-#Captcha string list, is used in the 'stringOrientation' captcha type
-stringsDict = ['add','subtract','adding','subtracting']
-#Default message to fish
-default = { 'content': "%f" }
-#Default message to sell
-sell = { 'content': "%s all" }
-#Default message to buy baits
-baits = { 'content': "%buy "+str(baitValue)+" "+str(bait) }
-#Default message to buy More Fish buff
-morefish = { 'content': "%buy fish"+str(boostCd)+"m" }
-#Default message to buy More Treasure Buff
-moretreasure = { 'content': "%buy treasure"+str(boostCd)+"m" }
-#Default payload
-payload = {
-    'op': 2,
-    'd': {
-        "token": token,
-        "properties": {
-            "$os": "windows",
-            "$browser": "chrome",
-            "$device": "pc"
-        }
-    }
-}
-
-#-------------------- AUX FUNCTIONS --------------------#
+import re, sys, os, datetime
+from configparser import ConfigParser
 
 class StdoutRedirection:
-    """Standard output redirection context manager"""
+    '''Standard output redirection context manager'''
     def __init__(self, path):
         self._path = path
 
@@ -92,7 +17,68 @@ class StdoutRedirection:
         sys.stdout.close()
         sys.stdout = sys.__stdout__
 
-#
+
+#-------------------- CONFIG LOADER --------------------#
+
+def configLoader(param = 'default') -> bool:
+    '''Generate and load configuration files'''
+    global channelId, token, bait, buffSwitch, cd, boostCd, logMode, logCaptcha, auto30m
+
+    configPath = os.getcwd()+'/autofish.config'
+
+    if(os.path.isfile(configPath) and param == 'default'):
+        #Load config
+        try:
+            config = ConfigParser()
+            config.read(configPath)
+            cfg = config['PREFERENCES']
+            #Config values
+            channelId = str(int(cfg['ChannelId'])) #yes, int() first
+            token = str(cfg['Token'])
+            bait = str(cfg['Bait'])
+            cd = float(cfg['Cooldown'])
+            buffSwitch = bool(cfg['BuffSwitch'])
+            boostCd = int(cfg['BoostCd']) 
+            logCaptcha = bool(cfg['LogCaptcha'])
+            logMode = str(cfg['LogMode'])
+            auto30m = bool(cfg['autofish_on_exit'])
+            return True
+        except:
+            #Call config loader in "create new config" mode 
+            configLoader('force')
+    else:
+        if param == 'force':
+            print('\nConfiguration information doesn\'t follow the expected format.')
+        
+        #Create new config
+        newConfig = ConfigParser()
+        newConfig['PREFERENCES'] = {
+                'ChannelId' : 'Your channel id here',
+                'Token' : 'Your authorization token here',
+                'Bait' : 'Your bait preference',
+                'BuffSwitch' : False,
+                'Cooldown' : 'Your cooldown',
+                'BoostCd' : 5,
+                'LogMode' : 'n',
+                'LogCaptcha': False,
+                'autofish_on_exit': False
+        }
+        try:
+            with open(configPath, 'w') as f:
+                newConfig.write(f)
+            print("\nConfig created ! You need to set your channel and token to continue.")
+            wasntCreated = True
+            os.system('notepad.exe autofish.config')
+        except:
+            if wasntCreated:
+                print("\nUnable to create new config, try again.")
+        finally:
+            sys.exit(1)
+
+
+
+#-------------------- AUX FUNCTIONS --------------------#
+
 def send_json_request(ws, request):
     ws.send(json.dumps(request))
 
@@ -129,19 +115,9 @@ def logRaw(event, mode):
         with StdoutRedirection("captchas.txt"):
             print(event)
 
-#this is poorly coded, idk maybe i just add a datetime.now() ?
-def makeMessageTimestamp(timestamp):
-    tmp = []
-    time = timestamp.split("T")
-    time = time[1].split(".")
-    tmp = time[0].split(":")
-    tmp1 = int(tmp[0]) + timezone
-    if tmp1 < 0:
-        tmp1 = 24 + tmp1
-        newTime = str(tmp1)+":"+str(tmp[1])+":"+str(tmp[2])
-    else:
-        newTime = str(tmp1)+":"+str(tmp[1])+":"+str(tmp[2])
-    return newTime
+def makeMessageTimestamp() -> str:
+    '''Simple datetime function'''
+    return datetime.datetime.now().strftime('%H:%M:%S')
 
 def checkResponse(ws, noise = 0):
     while True:
@@ -265,7 +241,7 @@ def successMessage(description, noise, timestamp):
             pass
         
     #Bottom log message
-    print(f"\n[LOG] NOISE: {noise} | TIMESTAMP: {makeMessageTimestamp(timestamp)} | STREAK: {streak} | BYPASSES: {bypassCount} | DESYNCS: {desyncs}\n")
+    print(f"\n[LOG] NOISE: {noise} | TIMESTAMP: {makeMessageTimestamp()} | STREAK: {streak} | BYPASSES: {bypassCount} | DESYNCS: {desyncs}\n")
 
 def checkBotConfirmation(ws, awnser, log):
     global bypassCount, sendsB
@@ -293,10 +269,9 @@ def checkBotConfirmation(ws, awnser, log):
             pass
 
 def antiBotBypass(event, ws):
-    
+    '''Identifies and solves captcha problems'''
     code = ""
     order = []
-    
 
     if event['d']['embeds'] == []:
 
@@ -322,7 +297,19 @@ def antiBotBypass(event, ws):
             if checkBotConfirmation(ws, awnser, event['d']) == True:
                 return True
             return False
-        
+
+        #Checks for <result> variant
+        if content.find('<result>') > -1:
+            expression = ""
+            x = content.split(":")
+            expression = x[len(x)-1]
+            expression = re.sub('[` .*]', '', expression)
+            resp = round(eval(expression))
+            awnser = "%verify "+str(resp)
+            if checkBotConfirmation(ws, awnser, event['d']) == True:
+                return True
+            return False
+      
         #Checks for strings orientations variant
         for x in range(len(stringsDict)):
             if content.find(stringsDict[x]) > -1:
@@ -405,10 +392,10 @@ def antiBotBypass(event, ws):
 def reBuff(ws):
     global count
     cd_B = 2 #You can change this if you want, not too low tho
-    if count > boostValue or count == 0:
-        if count == 0:
-            time.sleep(cd_B)
+
+    if count >= boostValue or count == 0:
         count = 1
+        
         #More fish for 'x' minutes
         r = requests.post(channel, data=morefish, headers=auth)
         checkResponse(ws)
@@ -434,9 +421,9 @@ def reBuff(ws):
 
         
 
-def fish():
+def autoFish(param = None):
     global count, sendsA, desyncs
-    clearConsole()
+    
     ws = websocket.WebSocket()
     ws.connect('wss://gateway.discord.gg/?v=6&encording=json')
     event = recieve_json_response(ws)
@@ -445,23 +432,91 @@ def fish():
     send_json_request(ws, payload)
     time.sleep(1)
 
+    #Legit Autofish for 30 minutes on exit
+    if param == 'auto30m':
+        return requests.post(channel, data={ 'content': '%buy auto30m' }, headers=auth)
+
     while True:   
         sendsA += 1
-        r = requests.post(channel, data=default, headers=auth)
         noise = round(random.uniform(cd, margin), 3)
+        
+        #Default message
+        r = requests.post(channel, data=default, headers=auth)
         checkResponse(ws, noise)
+
+        #Checks for unsync messages, important to properly identify captcha messages
         if not sendsA == sendsB:
             print(f"\n[WARNING] Your client was out of sync, the problem was solved ! (avoid using commands while AutoFish is running)\n")
             desyncs += 1
             checkResponse(ws, noise)
+        
+        #Auto buys temporary boosts
         if buffSwitch:
             reBuff(ws)
+
+        #Cooldown time to prevent flood
         time.sleep(noise)
 
 if __name__ == "__main__":
-    while True:  
-        try:
-            fish()
-        except:
-            print("GO FUCK YOURSELF")
-            sys.exit(1)
+    if configLoader():
+        #Default Bot Id
+        botUID = "574652751745777665"
+        #Channel API
+        channel = "https://discord.com/api/v9/channels/"+channelId+"/messages"
+        #Calculate how many times you can fish based in your cooldown time until you can buff again
+        boostValue = round((boostCd*60)/cd)-10
+        #Calculate how many baits is needed to resuply your last fishing session (last 'x' minutes where 'x' == boostCd)
+        baitValue = round(boostValue*0.55)
+        #This is important to randomize your fishing time (you can change the '0.25' to 0 if you want, but you probably will get more captchas)
+        margin = cd + 0.25
+        
+        #Default counters
+        streak, count, bypassCount = 0, 0, 0
+        sendsA, sendsB, desyncs = 0, 0, 0
+        
+        #Clear the console
+        clearConsole = lambda: os.system('cls' if os.name in ('nt', 'dos') else 'clear')
+        
+        #Authorization token
+        auth = {'authorization': token}
+        
+        #Emote list - is used to identify which emotes should be removed, you can add more if you want
+        emoteList = ['<:chest_artifact:708049330921013271>','<:charm_white:702921289907830814>','<:charm_red:702916693264957501>','<:charm_cyan:702921275458453514>','<:charm_green:702918994465652817>','<:charm_yellow:702919046772817950>','<:charm_blue:702918982943899648>','<:charm_pink:702919025365352520>','<:fb_chest:625008684786909224>','<:chest_legendary:708049312919322651>','<:chest_epic:708049321882550364>','<:chest_uncommon:708057306507771954>','<:chest_rare:708049302131441727>','<:fb_goldfish:625461158475726861>','<:fb_emeraldfish:625462358411837441>','<:fb_diamondfish:625461188418994196>','<:fb_lavafish:659067000735137793>','<:charm_lblue:702919008478953483>']
+        
+        #Captcha string list, is used in the 'stringOrientation' captcha type
+        stringsDict = ['add','subtract','adding','subtracting']
+        
+        #Default message to fish, sell and buy
+        default = { 'content': "%f" }
+        sell = { 'content': "%s all" }
+        baits = { 'content': "%buy "+str(baitValue)+" "+str(bait) }
+        
+        #Default message to buy More Fish and More Treasure buffs 
+        morefish = { 'content': "%buy fish"+str(boostCd)+"m" }
+        moretreasure = { 'content': "%buy treasure"+str(boostCd)+"m" }
+        
+        #Default payload
+        payload = {
+            'op': 2,
+            'd': { 
+                'token': token,
+                'properties': { 
+                    #No need to change these, but you can if you want
+                    '$os': 'windows',
+                    "$browser": 'chrome',
+                    '$device': 'pc'
+                }
+            }
+        }
+
+        #This loop prevents from raisnig error when losing connection
+        while True:  
+            try:
+                autoFish()
+            except:
+                #Autofish on exit switch
+                if auto30m:
+                    autoFish('auto30m')
+                
+                print("\nConnection Lost\n")
+                sys.exit(1) #Comment this line if you want to continue even after the connection is lost
