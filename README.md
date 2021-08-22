@@ -1,18 +1,17 @@
-# Virtual Fisher - Autofish Bot
+# Virtual Fisher : Autofish Bot
 
 Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com/) discord bot.
 
 ## Features
 - Auto Fish 
-- **Anti-bot Bypass** (Captcha bypass) [[INFORMATION]](https://github.com/thejoabo/virtualfisher-bot#captcha-information)
+- **Anti-bot Bypass** [[INFORMATION]](https://github.com/thejoabo/virtualfisher-bot#captcha-information)
 - Auto Buff (more treasures + more fish)
 
 ## Demonstration
-Demonstrating all features above: 
-![screen-gif](./demonstration.gif)
+Demo video: 
+[![Demo video](https://i.imgur.com/6sCK3uJ.png)](https://www.youtube.com/watch?v=m4MPYnChUJ4)
 
 ## Dependencies
-
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install all required dependencies (please, check if you already have it).
 
 ```bash
@@ -25,29 +24,23 @@ pip install threading
 pip install re
 pip install os
 pip install sys
+pip install datetime
+pip install configparser
 ```
+
 ## Customization
 You can customize some settings as listed bellow:
-```python
-#-------------------- CHANGE HERE --------------------#
-channelId = "Your channel id here"
-token = "Your authorization token here"
-
-#-------------------- PREFERENCES --------------------#
-#Your preference bait -> 'worms' / 'leeches' / 'magnet' / 'wise bait' / 'fish' / 'artifact magnet' / 'magic bait'
-bait = "Your bait"
-#True / False -> Automaticaly buy fish'x'm, treasure'x'm, sell all your inventory and rebuy baits
-buffSwitch = False
-#Logs
-logCaptcha = False
-#For now, leave it in 'n' option, otherwise it breaks the script idk why yet
-logMode = 'n' # e -> emotes / f -> full / em -> embeds / ee -> embeds + emotes / n -> don't log
-#Your %f cooldown time
-cd = 3.5 
-#Change the buff 'x' variable -> 5 or 20 (this will be used in the buff autobuy)
-boostCd = 20 #in minutes
-#Your timezone in UTC format (like: -1 , 3 , 0 ...) -> this will be used to properly display message timestamps 
-timezone = 0
+```config
+[PREFERENCES]
+channelid = Your channel id here
+token = Your authorization token here
+bait = Your bait preference
+buffswitch = False
+cooldown = Your cooldown
+boostcd = 5
+logmode = n  
+logcaptcha = False 
+autofish_on_exit = False 
 ```
 
 ## Usage
@@ -56,8 +49,11 @@ Open Command Prompt (cmd) where the file is located and type:
 python release.py
 ```
 ## Captcha Information
+
 #### Virtual Fisher has 7 variants (that I know of) of Anti-Bot captchas and currently 6/7 are tested and working:
+
 (btw, ignore 'success' misspelled lol)
+
 #### WORKING:
 
 - #### **[code] in embed** 
@@ -98,11 +94,12 @@ print(f"Eval: {awnser}")
 ##
 
 - #### **[stringOrientation] in embed** (E.g.: "User, Please verify by adding the following 2 numbers and subtract the third number: 12 : 8 : 11.")
+
 #### Code:
 ```python
 stringOrientation = "xxxx, Please verify by adding the following 2 numbers and subtract the third number: 12 : 8 : 11."
 
-stringsDict = ['add','subtract','multiply','adding','subtracting','multiplying']
+stringsDict = ['add','subtract','adding','subtracting']
 expression = ""
 x = stringOrientation.split(" ")
 for k in range(len(x)):
@@ -110,8 +107,6 @@ for k in range(len(x)):
         if x[k] == stringsDict[l]:
             if stringsDict[l].startswith('a'): #add, adding
                 order.append('+')
-            elif stringsDict[l].startswith('m'): #multiply, multiplying
-                order.append('*')
             elif stringsDict[l].startswith('s'): #subtract, subtracting
                 order.append('-')
 clean = re.sub(r'[^0-9:]+', '', stringOrientation) 
@@ -130,13 +125,15 @@ print(f"StringOrientation: {awnser}")
 #### Example:
 ![POC 5](https://i.imgur.com/9kV2xvv.png)
 
+##
+
 - #### **[stringOrientation] as plain text** (E.g.: "Please subtract the following 2 numbers: 14, 11.")
 
 #### Code:
 ```python
 content = "Please subtract the following 2 numbers: 14, 11."
 
-stringsDict = ['add','subtract','multiply','adding','subtracting','multiplying']
+stringsDict = ['add','subtract','adding','subtracting']
 order = []
 expression = ""
 numbers = content.split(":")
@@ -154,6 +151,7 @@ print(f"StringOrientationEmbed: {awnser}")
 #StringOrientationEmbed: %verify 3
 ```
 ##
+
 ## Image Captcha - IN DEVELOPMENT
 **The captcha image recognition option is being developed**, I know it would be very easy to just use an API (like Google Vision or Microsoft's Cognitive Services) but the accuracy would still be pretty low for full automation purposes.
 
@@ -176,5 +174,5 @@ So I decided to do a pre-process using an simple AI with weights (like blur, con
 
 ## Contributing
 - Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-- Any errors, bugs, strange behavior **[PLEASE OPEN AN ISSUE](https://github.com/thejoabo/virtualfisher-bot/issues/new)** containing a screenshot or describing the issue.
+- If you notice any errors, bugs or strange behavior **[PLEASE OPEN AN ISSUE](https://github.com/thejoabo/virtualfisher-bot/issues/new)** containing a screenshot or describing the issue.
 

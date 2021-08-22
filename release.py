@@ -1,6 +1,5 @@
-import requests, websocket
+import requests, websocket, threading
 import time, random, json
-import threading
 import re, sys, os, datetime
 from configparser import ConfigParser
 
