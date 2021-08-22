@@ -2,7 +2,7 @@
 
 Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com/) discord bot.
 
-## Features:
+## Features
 - Auto Fish 
 - **Anti-bot Bypass** (Captcha bypass) [[INFORMATION]](https://github.com/thejoabo/virtualfisher-bot#captcha-information)
 - Auto Buff (more treasures + more fish)
@@ -50,18 +50,18 @@ boostCd = 20 #in minutes
 timezone = 0
 ```
 
-## USAGE
+## Usage
 Open Command Prompt (cmd) where the file is located and type:
 ```bash
 python release.py
 ```
-## CAPTCHA INFORMATION
+## Captcha Information
 #### Virtual Fisher has 7 variants (that I know of) of Anti-Bot captchas and currently 6/7 are tested and working:
 (btw, ignore 'success' misspelled lol)
 #### WORKING:
 
-- #### **\<code\> in embed** 
-- #### **\<code\> as plain text** 
+- #### **code in embed** 
+- #### **code as plain text** 
 
 ##### Code: 
 ```python
@@ -78,8 +78,8 @@ print(f"\nCode: {awnser}")
 
 ##
 
-- #### **\<result\> in embed** 
-- #### **\<result\> as plain text** 
+- #### **\result\ in embed** 
+- #### **\result\ as plain text** 
 
 #### Code:
 ```python
