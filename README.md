@@ -7,12 +7,12 @@ Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com
 - **Anti-bot Bypass** [[INFORMATION]](https://github.com/thejoabo/virtualfisher-bot#captcha-information)
 - Auto Buff (more treasures + more fish)
 
-## Demonstration
-Demo video: 
+## Demonstration video
+[Demo video (CLICK ON THE PIC TO WATCH)](https://www.youtube.com/watch?v=m4MPYnChUJ4): 
 [![Demo video](https://i.imgur.com/6sCK3uJ.png)](https://www.youtube.com/watch?v=m4MPYnChUJ4)
 
 ## Dependencies
-Use the package manager [pip](https://pip.pypa.io/en/stable/) to install all required dependencies (please, check if you already have it).
+Use the package manager [pip](https://pip.pypa.io/en/stable/) to install all required dependencies (you probably already have all of them).
 
 ```bash
 pip install requests
@@ -26,21 +26,23 @@ pip install os
 pip install sys
 pip install datetime
 pip install configparser
+pip install distutils
 ```
 
 ## Customization
-You can customize some settings as listed bellow:
-```config
+You can easily customize the options listed below in the automatically generated 'autofish.config' file:
+
+```conf
 [PREFERENCES]
 channelid = Your channel id here
 token = Your authorization token here
 bait = Your bait preference
-buffswitch = False
+buffswitch = true
 cooldown = Your cooldown
 boostcd = 5
-logmode = n  
-logcaptcha = False 
-autofish_on_exit = False 
+logmode = n
+logcaptcha = false
+autofish_on_exit = false
 ```
 
 ## Usage

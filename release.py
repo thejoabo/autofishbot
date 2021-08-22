@@ -1,6 +1,7 @@
 import requests, websocket, threading
 import time, random, json
 import re, sys, os, datetime
+from distutils import util
 from configparser import ConfigParser
 
 class StdoutRedirection:
@@ -36,11 +37,11 @@ def configLoader(param = 'default') -> bool:
             token = str(cfg['Token'])
             bait = str(cfg['Bait'])
             cd = float(cfg['Cooldown'])
-            buffSwitch = bool(cfg['BuffSwitch'])
+            buffSwitch = util.strtobool(cfg['BuffSwitch'])
             boostCd = int(cfg['BoostCd']) 
-            logCaptcha = bool(cfg['LogCaptcha'])
+            logCaptcha = util.strtobool(cfg['LogCaptcha'])
             logMode = str(cfg['LogMode'])
-            auto30m = bool(cfg['autofish_on_exit'])
+            auto30m = util.strtobool(cfg['autofish_on_exit'])
             return True
         except:
             #Call config loader in "create new config" mode 
@@ -55,12 +56,12 @@ def configLoader(param = 'default') -> bool:
                 'ChannelId' : 'Your channel id here',
                 'Token' : 'Your authorization token here',
                 'Bait' : 'Your bait preference',
-                'BuffSwitch' : False,
+                'BuffSwitch' : 'true',
                 'Cooldown' : 'Your cooldown',
                 'BoostCd' : 5,
                 'LogMode' : 'n',
-                'LogCaptcha': False,
-                'autofish_on_exit': False
+                'LogCaptcha': 'false',
+                'autofish_on_exit': 'false'
         }
         try:
             with open(configPath, 'w') as f:
@@ -87,7 +88,6 @@ def recieve_json_response(ws):
         return json.loads(response)
 
 def heartbeat(interval, ws):
-    print(">> Starting up...")
     while True:
         time.sleep(interval)
         heartbeatJSON = {
@@ -118,6 +118,45 @@ def makeMessageTimestamp() -> str:
     '''Simple datetime function'''
     return datetime.datetime.now().strftime('%H:%M:%S')
 
+def messagePrettify(message, param) -> str:
+    text = ""
+    
+    if param == 'enough':
+        tmp = message.split(' ')
+        # :x: You don't have enough :fb_emeraldfish:.
+        for x in range(1, len(tmp)):
+            if tmp[x].find('fb_') < 0:
+                text += tmp[x] + " "
+            else:
+                if tmp[x].find('emerald') > -1:
+                    text += 'Emerald Fish.'
+                else:
+                    text += 'Gold Fish.'
+        return text
+    
+    if param == 'already':
+        # You are already boosting that! Time left: 16m 3s
+        return message
+    
+    if param == 'minutes':
+        #:white_check_mark: You will now catch more fish for the next 5 minutes.
+        tmp = message.split(' ')
+        tmp.remove(tmp[0])
+        text = ' '.join(tmp)
+        return text
+    
+    if param == 'sold':
+        # :white_check_mark: You sold your entire inventory for $92.\nYou now have $23,426!
+        values = []
+        tmp = message.split('\n')
+        for x in range(len(tmp)):
+            values.append(re.sub(r'[^0-9$,]', '', tmp[x]))
+        text = f'You sold your inventory for {values[0]}. Account balance: {values[1]}.'
+        return text
+        
+
+
+
 def checkResponse(ws, noise = 0):
     while True:
         event = recieve_json_response(ws)
@@ -134,18 +173,22 @@ def checkResponse(ws, noise = 0):
                         tempFix = re.sub('[*`|]', '', tempFix)
                         
                         #Boost messages
-                        if tempFix.find("enough") > -1:
-                            print("\n[ALERT]",tempFix)
+                        if tempFix.find('enough') > -1:
+                            print("\n[ALERT]", messagePrettify(tempFix, 'enough'))
                             return True
+
                         if tempFix.find("You are already") > -1:
-                            print("\n[COOLDOWN]",tempFix)
+                            print("\n[COOLDOWN]", messagePrettify(tempFix, 'already'))
                             return True
+
                         if tempFix.find("minutes") > -1:
-                            print("\n[SUCESS-BOOST]",tempFix)
+                            print("\n[SUCESS-BOOST]", messagePrettify(tempFix, 'minutes'))
                             return True
+
                         if tempFix.find("sold") > -1:
-                            print("\n[SUCESS-SALE]",tempFix)
+                            print("\n[SUCESS-SALE]",  messagePrettify(tempFix, 'sold'))
                             return True
+
                         if event['d']['embeds'][0]['title'] == "Bait purchase":
                             text = tempFix.split('$')
                             text = text[1].split('.')
@@ -230,7 +273,7 @@ def successMessage(description, noise, timestamp):
             tmp = desc[x].split(" ")
             tmp = int(tmp[0]) #if it is not a message related to catching fish, it stops here 
             
-            #Removing emote -> i know, this is trash coding, i will rewrite it later 
+            #Removing emote -> i will rewrite it later 
             line = desc[x].split("<")
             part1 = re.sub(' ','',line[0])
             line = line[1].split(">")
@@ -431,9 +474,11 @@ def autoFish(param = None):
     send_json_request(ws, payload)
     time.sleep(1)
 
-    #Legit Autofish for 30 minutes on exit
+    #Legit Autofish for 30 minutes
     if param == 'auto30m':
-        return requests.post(channel, data={ 'content': '%buy auto30m' }, headers=auth)
+        print("\n[ALERT] You will fish for the next 30 minutes.")
+        r = requests.post(channel, data={ 'content': '%buy auto30m' }, headers=auth)
+        checkResponse(ws, 0)
 
     while True:   
         sendsA += 1
@@ -508,14 +553,16 @@ if __name__ == "__main__":
             }
         }
 
-        #This loop prevents from raisnig error when losing connection
+        #This loop prevents from raise error when losing connection
         while True:  
             try:
                 autoFish()
             except:
-                #Autofish on exit switch
-                if auto30m:
-                    autoFish('auto30m')
-                
+                try:
+                    #Autofish on exit switch only using 'CTRL + C'
+                    if auto30m:
+                        autoFish('auto30m')
+                except:
+                    print("Err")
                 print("\nConnection Lost\n")
                 sys.exit(1) #Comment this line if you want to continue even after the connection is lost
