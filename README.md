@@ -4,7 +4,7 @@ Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com
 
 ## Features:
 - Auto Fish 
-- **Anti-bot Bypass** (Captcha bypass) [[INFORMATION]](https://github.com/thejoabo/virtualfisher-bot#Captcha-Issues)
+- **Anti-bot Bypass** (Captcha bypass) [[INFORMATION]](https://github.com/thejoabo/virtualfisher-bot#captcha-information)
 - Auto Buff (more treasures + more fish)
 
 ## Dependencies
@@ -13,7 +13,7 @@ Use the package manager [pip](https://pip.pypa.io/en/stable/) to install all req
 
 ```bash
 pip install requests
-pip install time
+pip install \time
 pip install random
 pip install websocket-client
 pip install json
@@ -159,7 +159,8 @@ So I decided to do a pre-process using an simple AI with weights (like blur, con
 
 ### Below are the pre-processing steps and also the text extracted from the image:
 #### - Original file:
-![Step 1 - OG](https://i.imgur.com/RehLvf2.png)
+<img align="center" src="https://i.imgur.com/RehLvf2.png" alt="Step 1 - OG">
+
 #### - Grayscale:
 ![Step 1 - Grayscale](https://i.imgur.com/Jgth8kT.png)
 #### - Rotate + Averaging Blur:
