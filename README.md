@@ -159,8 +159,7 @@ So I decided to do a pre-process using an simple AI with weights (like blur, con
 
 ### Below are the pre-processing steps and also the text extracted from the image:
 #### - Original file:
-<img align="center" src="https://i.imgur.com/RehLvf2.png" alt="Step 1 - OG">
-
+![Step 1 - Grayscale](https://i.imgur.com/RehLvf2.png)
 #### - Grayscale:
 ![Step 1 - Grayscale](https://i.imgur.com/Jgth8kT.png)
 #### - Rotate + Averaging Blur:
@@ -173,5 +172,5 @@ So I decided to do a pre-process using an simple AI with weights (like blur, con
 
 ## Contributing
 - Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-- Any errors, bugs, weird behaviors **PLEASE** open a issue with a print or describing the issue.
+- Any errors, bugs, strange behavior **[OPEN AN ISSUE](https://github.com/thejoabo/virtualfisher-bot/issues/new)** containing a screenshot or describing the issue.
 
