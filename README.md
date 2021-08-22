@@ -56,8 +56,8 @@ python release.py
 (btw, ignore 'success' misspelled lol)
 #### WORKING:
 
-- #### **<code> in embed** 
-- #### **<code> as plain text** 
+- #### **\<code\> in embed** 
+- #### **\<code\> as plain text** 
 
 ##### Code: 
 ```python
@@ -74,8 +74,8 @@ print(f"\nCode: {awnser}")
 
 ##
 
-- #### **<result> in embed** 
-- #### **<result> as plain text** 
+- #### **\<result\> in embed** 
+- #### **\<result\> as plain text** 
 
 #### Code:
 ```python
