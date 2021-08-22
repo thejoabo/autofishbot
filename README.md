@@ -60,8 +60,8 @@ python release.py
 (btw, ignore 'success' misspelled lol)
 #### WORKING:
 
-- #### **code in embed** 
-- #### **code as plain text** 
+- #### **[code] in embed** 
+- #### **[code] as plain text** 
 
 ##### Code: 
 ```python
@@ -78,8 +78,8 @@ print(f"\nCode: {awnser}")
 
 ##
 
-- #### **\result\ in embed** 
-- #### **\result\ as plain text** 
+- #### **[result] in embed** 
+- #### **[result] as plain text** 
 
 #### Code:
 ```python
@@ -97,7 +97,7 @@ print(f"Eval: {awnser}")
 
 ##
 
-- #### **<stringOrientation> in embed** (E.g.: "User, Please verify by adding the following 2 numbers and subtract the third number: 12 : 8 : 11.")
+- #### **[stringOrientation] in embed** (E.g.: "User, Please verify by adding the following 2 numbers and subtract the third number: 12 : 8 : 11.")
 #### Code:
 ```python
 stringOrientation = "xxxx, Please verify by adding the following 2 numbers and subtract the third number: 12 : 8 : 11."
@@ -130,7 +130,7 @@ print(f"StringOrientation: {awnser}")
 #### Example:
 ![POC 5](https://i.imgur.com/9kV2xvv.png)
 
-- #### **<stringOrientation> as plain text** (E.g.: "Please subtract the following 2 numbers: 14, 11.")
+- #### **[stringOrientation] as plain text** (E.g.: "Please subtract the following 2 numbers: 14, 11.")
 
 #### Code:
 ```python
