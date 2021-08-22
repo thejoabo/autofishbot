@@ -8,6 +8,7 @@ Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com
 - Auto Buff (more treasures + more fish)
 
 ## Demonstration
+Demonstrating all features above: 
 ![screen-gif](./demonstration.gif)
 
 ## Dependencies
