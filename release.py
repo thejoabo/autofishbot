@@ -68,7 +68,14 @@ def configLoader(param = 'default') -> bool:
                 newConfig.write(f)
             print("\nConfig created ! You need to set your channel and token to continue.")
             wasntCreated = True
-            os.system('notepad.exe autofish.config')
+            if sys.platform == 'linux':
+                os.system('gedit autofish.config')
+            elif sys.platform == 'darwin':
+                os.system('open -a TextEdit autofish.config')
+            elif sys.platform == 'win32':
+                os.system('notepad.exe autofish.config')
+            else:
+                print(f"\nPlease, edit it here: {configPath}")
         except:
             if wasntCreated:
                 print("\nUnable to create new config, try again.")
