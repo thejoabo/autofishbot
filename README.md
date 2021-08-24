@@ -45,8 +45,9 @@ logcaptcha = false
 autofish_on_exit = false
 ```
 
-## Usage
-Open Command Prompt (cmd) where the file is located and type:
+## Installation and Usage
+
+Using the terminal, type:
 ```bash
 git clone https://github.com/thejoabo/virtualfisher-bot.git
 cd /virtualfisher-bot
@@ -64,6 +65,7 @@ python release.py
 - #### **[code] as plain text** 
 
 ##### Code: 
+
 ```python
 codeTest = "Please enter the following code to continue: `Bup9K97c`"
 x = codeTest.split(":")
