@@ -48,6 +48,8 @@ autofish_on_exit = false
 ## Usage
 Open Command Prompt (cmd) where the file is located and type:
 ```bash
+git clone https://github.com/thejoabo/virtualfisher-bot.git
+cd /virtualfisher-bot
 python release.py
 ```
 ## Captcha Information
