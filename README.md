@@ -1,4 +1,4 @@
-# Virtual Fisher : Autofish Bot
+# Virtual Fisher : Autofish Bot [ABANDONED FOR NOW]
 
 Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com/) discord bot.
 
