@@ -538,9 +538,9 @@ if __name__ == "__main__":
         stringsDict = ['add','subtract','adding','subtracting']
         
         #Default message to fish, sell and buy
-        default = { 'content': "%f" }
-        sell = { 'content': "%s all" }
-        baits = { 'content': "%buy "+str(baitValue)+" "+str(bait) }
+        default = { 'content': '%f' }
+        sell = { 'content': '%s all' }
+        baits = { 'content': f'%buy {str(bait).lower()} {baitValue}' }
         
         #Default message to buy More Fish and More Treasure buffs 
         morefish = { 'content': "%buy fish"+str(boostCd)+"m" }
