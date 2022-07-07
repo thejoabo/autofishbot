@@ -1,4 +1,4 @@
-# Virtual Fisher : Autofish Bot [ABANDONED FOR NOW]
+# Virtual Fisher : Autofish Bot
 
 Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com/) discord bot.
 
@@ -6,6 +6,9 @@ Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com
 - Auto Fish 
 - **Anti-bot Bypass** [[INFORMATION]](https://github.com/thejoabo/virtualfisher-bot#captcha-information)
 - Auto Buff (more treasures + more fish)
+
+## Comming soon...
+![COMING-SOON](https://media.discordapp.net/attachments/943517334566494219/994439612338536478/unknown.png)
 
 ## Demonstration video
 [Demo video (CLICK ON THE PIC TO WATCH)](https://www.youtube.com/watch?v=m4MPYnChUJ4): 
