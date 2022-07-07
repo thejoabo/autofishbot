@@ -7,11 +7,11 @@ Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com
 - **Anti-bot Bypass** [[INFORMATION]](https://github.com/thejoabo/virtualfisher-bot#captcha-information)
 - Auto Buff (more treasures + more fish)
 
-## Comming soon...
-![COMING-SOON](https://media.discordapp.net/attachments/943517334566494219/994439612338536478/unknown.png)
+## Coming soon
+![COMING-SOON](https://media.discordapp.net/attachments/983928799743860748/994726255788302376/unknown.png)
 
 ## Demonstration video
-[Demo video (CLICK ON THE PIC TO WATCH)](https://www.youtube.com/watch?v=m4MPYnChUJ4): 
+[Demo video](https://www.youtube.com/watch?v=m4MPYnChUJ4): 
 [![Demo video](https://i.imgur.com/6sCK3uJ.png)](https://www.youtube.com/watch?v=m4MPYnChUJ4)
 
 ## Dependencies
@@ -53,7 +53,7 @@ autofish_on_exit = false
 Using the terminal, type:
 ```bash
 git clone https://github.com/thejoabo/virtualfisher-bot.git
-cd /virtualfisher-bot
+cd virtualfisher-bot
 python release.py
 ```
 ## Captcha Information
