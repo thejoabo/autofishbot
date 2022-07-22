@@ -1,5 +1,19 @@
 # Changelog
-###  v1.0.0 - 7/21/21 (current)
+
+##  v1.1.0 - 7/22/21 (current)
+#### **Added**
+- window size detection function
+- proper pause/resume function
+#### **Changed**
+- captcha detection method
+- messages alignment (centered)
+#### **Fixed**
+- messages desyncs (due to unhandled events)
+- profile information scraping 
+
+<hr>
+
+##  v1.0.0 - 7/21/21 
 #### **Added**
 - CLI UI (new menu)
 - **image recognition (testing phase)**

@@ -49,7 +49,7 @@ MENUART = """ ___        _         ___  _      _     ___       _
 MENUART2 = [
     ' ▀▄▀ ▄▀▄ █ █   ▄▀▀ ▄▀▄ █ █ ▄▀  █▄█ ▀█▀',
     '  █  ▀▄▀ ▀▄█   ▀▄▄ █▀█ ▀▄█ ▀▄█ █ █  █ '
-    ]
+]
 
 KEYBINDS = [
     {'key': 'KEYBINDS ', 'description': '   INFORMATION   '},
@@ -66,7 +66,7 @@ DEBUG = False
 
 #Switches
 disconnected = False
-fish_paused = True
+fish_paused = False
 in_cooldown = False
 
 #Counters
@@ -266,10 +266,10 @@ class Captcha:
                 exit(f'[E] Unknown captcha.')
                 #return True
 
-    def solve(self, session: discordWebgate) -> bool:
+    def solve(self) -> None:
         if self.image_url:
             #Generate captcha values using all engines
-            for engine in [2, 1]: #[2, 3, 1]
+            for engine in [2, 1, 3]: #[2, 3, 1]
                 log(f'Using OCR Engine {engine}')
                 
                 payload = {
@@ -297,17 +297,7 @@ class Captcha:
                         log(f'OCR Engine {engine} failed to provide reasonable certainty.', 'notice')
                 else:
                     log(f'OCR Engine {engine} returned exit code {response["OCRExitCode"]}.', 'err')
-                sleep(3)
-                
-            #Atempt to solve
-            if self.answerList != []:
-                for testcase in self.answerList:
-                    if not self.solved:
-                        log(f'Attempting code: \'{testcase}\'')
-                        session.sendQuery(f'%verify {testcase}')
-                        sleep(3)
-                    else:
-                        return True
+                sleep(1.5)
         else:
             session.disconnect()
             debug(self.event)
@@ -376,7 +366,7 @@ class Message:
             self.items_list = custom_list + self.items_list
 
 
-class Profile():
+class Profile:
     def __init__(self, event = []) -> None:
         self.queries = ['%inv', '%stats'] #top...
         self.balance = None
@@ -394,12 +384,10 @@ class Profile():
         self.buildStats(event)
 
     def update(self, session : discordWebgate) -> None:
-        global fish_paused
-        fish_paused = True
-        for query in self.queries:
+        for query in self.queries + ['%f']:
             session.sendQuery(query)
-            sleep(USER_COOLDOWN)
-        fish_paused = False
+            sleep(2)
+        return
 
     def rebuildLists(self, event, target) -> None:
         if target == 'inv':
@@ -452,7 +440,7 @@ class Profile():
                                 self.balance = sub('[^\d+]', '', line)
                                 if len(self.balance) > 10:
                                     self.balance = '{:.2e}'.format(int(self.balance))
-                            elif line.find('Level') > -1:
+                            elif line.find('XP to next level.') > -1:
                                 #Level
                                 self.level = sub('[.*a-zA-Z]', '',  sub(', ', '|', line))
                                 self.level = sub(' ', '', self.level)
@@ -488,14 +476,11 @@ class Profile():
             {'title': 'GOLD FISH:    ', 'content': f'{self.golden["current"]}'},
             {'title': 'EMERALD FISH: ', 'content': f'{self.emerald["current"]}'}
         ]
-            
-    
 
 #-------------------- AUX FUNCTIONS --------------------#
 
 def autoBuff(_queries = ['%s all', '%inv', '%stats']):
-    global session, disconnected, buff_countdown, fish_paused
-    fish_paused = True
+    global session, disconnected, buff_countdown
     
     #More fish and more treasure
     if AUTO_BUFF:
@@ -509,18 +494,18 @@ def autoBuff(_queries = ['%s all', '%inv', '%stats']):
     #Needed to continue fishing
     _queries.append('%f')
     
-    while not disconnected:
-        fish_paused = True
+    def resuply(gc):
         for _query in _queries:
             try:
                 while captcha.detected:
                     sleep(1)
                 session.sendQuery(_query)
-                sleep(3)
+                sleep(2)
             except Exception as e:
                 log(f'Failed to send query -> {e}', 'e')
-        fish_paused = False
-        
+    
+    while not disconnected:
+        pause(resuply)
         countdown = (BUFF_LENGTH * 60)
         for seconds in range(countdown):
             buff_countdown = (countdown - seconds)
@@ -553,11 +538,44 @@ def debug(event):
     if DEBUG:
         print(f'\n\n{event}\n\n')
 
+def pause(func: object = None, fparam: any = None, resumefunc: object = None, rparam: any = None) -> None:
+    global fish_paused
+    if func:
+        #Pause between some function
+        log(f'Autofish paused. Calling function: {func}')
+        fish_paused = True
+        func(fparam)
+        log(f'Autofish resumed. Call endend.')
+        fish_paused = False
+    else:
+        if fish_paused:
+            #Resume
+            if resumefunc:
+                resumefunc(rparam)
+            fish_paused = False
+            log(f'Autofish resumed.')
+        else:
+            #Pause
+            fish_paused = True
+            log(f'Autofish paused.')
+
+def cooldown(cd: float) -> None:
+    global in_cooldown, streak
+    in_cooldown = True
+    streak += 1
+    sleep(cd)
+    in_cooldown = False
+
+def isTargetMessage(e: dict) -> bool:
+    if e['channel_id'] == CHANNEL_ID:
+        if e['author']['id'] == BOT_UID:
+            return True
+    return False
 
 
 #-------------------- MENU --------------------#
 def drawMenu(stdscr):
-    global log_message, streak, bypasses, buff_countdown, fish_paused
+    global log_message, streak, buff_countdown
     
     #*Init
     stdscr.nodelay(True)
@@ -590,18 +608,9 @@ def drawMenu(stdscr):
         
         #*Pressed keys
         if pressedKey == ord('p'):
-            if fish_paused:
-                if not in_cooldown:
-                    fish_paused = False
-                    session.sendQuery('%f')
-                    log(f'Autofish resumed.')
-                else:
-                    log(f'Cooldown.', 'notice')
-            else:
-                fish_paused = True
-                log(f'Autofish paused.')
+            pause(resumefunc=session.sendQuery, rparam='%f')
         elif pressedKey == ord('u'):
-            profile.update(session)
+            pause(profile.update, session)
         elif pressedKey == ord('H'):
             log('Help page pressed - not implemented yet.', 'notice')
         elif pressedKey == ord('Q'):
@@ -618,93 +627,96 @@ def drawMenu(stdscr):
             m_height, m_width, m_column = (height // 2), (width // 2), (column // 2)
             #!stdscr.addstr(m_height, m_width, "C") #absolute center
             
-            #------------------------ TEXT --------------------------#
-            
-            #*Render Last notification
-            stdscr.addstr(0, 1, resize(log_message, width))
-            
-            #*Render Ascii art
-            splitedAscii = MENUART.splitlines()
-            ascii_pos_middle = (m_width - 1) - (max(len(x) for x in splitedAscii) // 2)
-            for k, line in enumerate(splitedAscii):
-                stdscr.addstr(k + 2, ascii_pos_middle, line)
-
-            #*Render keybinds information panel
-            for k, line in enumerate(KEYBINDS):
-                _content = f'{line["key"]}-{line["description"]}'
-                _content_pos_w = ((width - column) + m_column) - (len(_content) // 2)
-                _content_pos_h = k + 3
-                if line == KEYBINDS[0]:
-                    _content_pos_h = k + 2
-                stdscr.addstr(_content_pos_h, _content_pos_w, _content)
+            #mininum
+            # 112 -> width
+            # 35 -> height
+            if width < 112 or height < 35:
+                size_inf = ['[MENU]', 'Mininum size: 112 x 35', f'Current: {width} x {height}']
+                for k, line in enumerate(size_inf):
+                    stdscr.addstr(m_height + k - 1, m_width - (len(line) // 2), line)
+            else:
+                #------------------------ TEXT --------------------------#
                 
-            #*Render app information
-            for k, line in enumerate(app_info):
-                _content = f'{line["title"]}{line["content"]}'
-                _content_pos_w = ((width - column)) #-(len(_content) // 2)
-                _content_pos_h = (height - row) + k + 2 
-                if line == app_info[0]:
-                    
+                #*Render Last notification
+                stdscr.addstr(0, 1, resize(log_message, width))
+                
+                #*Render Ascii art
+                splitedAscii = MENUART.splitlines()
+                ascii_pos_middle = (m_width - 1) - (max(len(x) for x in splitedAscii) // 2)
+                for k, line in enumerate(splitedAscii):
+                    stdscr.addstr(k + 2, ascii_pos_middle, line)
+
+                #*Render keybinds information panel
+                for k, line in enumerate(KEYBINDS):
+                    _content = f'{line["key"]}-{line["description"]}'
                     _content_pos_w = ((width - column) + m_column) - (len(_content) // 2)
-                    _content_pos_h = (height - row) + k + 1
-                stdscr.addstr(_content_pos_h, _content_pos_w, _content)
+                    _content_pos_h = k + 3
+                    if line == KEYBINDS[0]:
+                        _content_pos_h = k + 2
+                    stdscr.addstr(_content_pos_h, _content_pos_w, _content)
+                    
+                #*Render app information
+                for k, line in enumerate(app_info):
+                    _content = f'{line["title"]}{line["content"]}'
+                    _content_pos_w = ((width - column)) #-(len(_content) // 2)
+                    _content_pos_h = (height - row) + k + 2 
+                    if line == app_info[0]:
+                        _content_pos_w = ((width - column) + m_column) - (len(_content) // 2)
+                        _content_pos_h = (height - row) + k + 1
+                    stdscr.addstr(_content_pos_h, _content_pos_w, _content)
+                    
+                #*Render inventory
+                for k, line in enumerate(inventory):
+                    _content = f'{line["title"]}{line["content"]}'
+                    _content_pos_w = m_width - column
+                    _content_pos_h = (height - row) + k + 2
+                    if line == inventory[0]:
+                        _content_pos_w = m_width - (len(_content) // 2)
+                        _content_pos_h = (height - row) + k + 1
+                    stdscr.addstr(_content_pos_h, _content_pos_w, _content)
+                    
+                #*Render player stats
+                for k, line in enumerate(stats):
+                    _content = f'{line["title"]}{line["content"]}'
+                    _content_pos_w = 0
+                    _content_pos_h = (height - row) + k + 2
+                    if line == stats[0]:
+                        _content_pos_h = (height - row) + k + 1
+                        _content_pos_w = m_column - (len(_content) // 2) - 2 
+                    stdscr.addstr(_content_pos_h, _content_pos_w, _content)
                 
-            #*Render inventory
-            for k, line in enumerate(inventory):
-                _content = f'{line["title"]}{line["content"]}'
-                _content_pos_w = m_width - column
-                _content_pos_h = (height - row) + k + 2
-                if line == inventory[0]:
-                    _content_pos_w = m_width - (len(_content) // 2)
-                    _content_pos_h = (height - row) + k + 1
-                stdscr.addstr(_content_pos_h, _content_pos_w, _content)
-                
-            #*Render player stats
-            for k, line in enumerate(stats):
-                _content = f'{line["title"]}{line["content"]}'
-                _content_pos_w = 0
-                _content_pos_h = (height - row) + k + 2
-                if line == stats[0]:
-                    _content_pos_h = (height - row) + k + 1
-                    _content_pos_w = m_column - (len(_content) // 2) - 2 
-                stdscr.addstr(_content_pos_h, _content_pos_w, _content)
-            
-            #*Render middle ascii art
-            for k, line in enumerate(MENUART2):
-                _content = f'{line}'
-                _content_pos_w = m_width - (len(_content) // 2) - 2 
-                _content_pos_h = round(m_height * 0.45) + k
-                stdscr.addstr(_content_pos_h, _content_pos_w, f'{_content}')
-
-            #*Render middle information
-            if len(message.items_list) > 1:
-                for k, line in enumerate(message.items_list):
+                #*Render middle ascii art
+                for k, line in enumerate(MENUART2):
                     _content = f'{line}'
-                    _content_pos_w = m_width - (max(len(x) for x in message.items_list) // 2)#- floor(len(_content) / 2) 
-                    _content_pos_h = (m_height - (len(message.items_list) // 2)) + k
-                    if _content != '': 
-                        stdscr.addstr(_content_pos_h, _content_pos_w, f'{_content}')
-            
+                    _content_pos_w = m_width - (len(_content) // 2) - 2 
+                    _content_pos_h = round(m_height * 0.45) + k
+                    stdscr.addstr(_content_pos_h, _content_pos_w, f'{_content}')
 
-            #------------------------ LINES --------------------------#
-            
-            #*Left
-            stdscr.vline(1, column - 2, curses.ACS_VLINE, height)
-            #*Right
-            stdscr.vline(1, (width - column) - 2, curses.ACS_VLINE, height)
-            #*Top
-            stdscr.hline(1, 0, curses.ACS_HLINE, width)
-            #*Logo bottom frame -> perfectly align with pair number of columns
-            stdscr.hline(len(splitedAscii) + 3, column - 1, curses.ACS_HLINE, (column * 2) - 1)
-            #*Bottom
-            stdscr.hline((height - row), 0, curses.ACS_HLINE, width)
+                #*Render middle information
+                if len(message.items_list) > 1:
+                    for k, line in enumerate(message.items_list):
+                        _content = f'{line}'
+                        _content_pos_w = m_width - len(_content) // 2
+                        _content_pos_h = (m_height - (len(message.items_list) // 2)) + k
+                        if _content != '': 
+                            stdscr.addstr(_content_pos_h, _content_pos_w, f'{_content}')
+                
+                #------------------------ LINES --------------------------#
+                
+                #*Left
+                stdscr.vline(1, column - 2, curses.ACS_VLINE, height)
+                #*Right
+                stdscr.vline(1, (width - column) - 2, curses.ACS_VLINE, height)
+                #*Top
+                stdscr.hline(1, 0, curses.ACS_HLINE, width)
+                #*Logo bottom frame -> perfectly align with pair number of columns
+                stdscr.hline(len(splitedAscii) + 3, column - 1, curses.ACS_HLINE, (column * 2) - 1)
+                #*Bottom
+                stdscr.hline((height - row), 0, curses.ACS_HLINE, width)
             
 
             #*Refresh screen
-            if fish_paused:
-                sleep(1)
-            else:
-                sleep(0.5)
+            sleep(0.3)
             stdscr.refresh()
             pressedKey = stdscr.getch()
             
@@ -714,21 +726,9 @@ def drawMenu(stdscr):
             exit(f'[E] Something wen\'t wrong -> {e}') 
 
 
-def cooldown(cd: float) -> None:
-    global in_cooldown, streak
-    in_cooldown = True
-    streak += 1
-    sleep(cd)
-    in_cooldown = False
-
-def isTargetMessage(e):
-    if e['channel_id'] == CHANNEL_ID:
-        if e['author']['id'] == BOT_UID:
-            return True
-    return False
-
+#------------------------ MAIN --------------------------#
 def main():
-    global session, streak, bypasses, disconnected, message, cooldown_lifetime, fish_paused, profile, captcha
+    global session, streak, bypasses, disconnected, message, cooldown_lifetime, profile, captcha
     atp = 0
     while True:
         cooldown_lifetime = round(uniform(USER_COOLDOWN, (USER_COOLDOWN + MARGIN)), 3)
@@ -739,6 +739,20 @@ def main():
             except Exception as e:
                 exit(f'\n[E] Fish query couldn\'t be sent -> {e}')
         
+        if captcha.detected and atp <= 3:
+            try:
+                if captcha.answerList != []:
+                    answer = captcha.answerList.pop(0)
+                    session.sendQuery(f'%verify {answer}')
+                else:
+                    print(f'{captcha.answerList=} | Empty, should regen ! If you are seem this, please open an issue.')
+                    atp += 1
+                    session.sendQuery('%verify regen')
+                    captcha.reset()
+            except Exception as e:
+                #Failed to send message
+                log(f'Manual captcha is required. -> {e}', 'e')
+        
         while True:
             response = session.recieveEvent()
             if response['t'] in ['MESSAGE_CREATE', 'MESSAGE_UPDATE']:
@@ -747,65 +761,47 @@ def main():
                 #try:
                 if isTargetMessage(event):
                     message = Message(event)
-                    
-                    #*Captcha detection
-                    if message.content == 'You may now continue.':
-                        log('Captcha bypassed successfully !')
-                        atp = 0
-                        bypasses += 1
-                        captcha.reset()
-                        break
 
+                    #*Captcha detection
                     if captcha.detected:
-                        log(f'Captcha detected !', 'notice')
-                        if captcha.solved:
-                            captcha = Captcha()
-                            if captcha.detect(event):
-                                captcha.solve(session)   
-                        else:
-                            atp += 1
-                            if atp <= 3:
-                                session.sendQuery('%v regen')
-                                captcha.reset()
-                                pass
-                            else:
-                                log(f'Waiting for manual captcha input !', 'notice')
+                        if message.content == 'You may now continue.':
+                            log('Captcha bypassed successfully !')
+                            atp = 0
+                            bypasses += 1
+                            captcha.reset()
+                        break
                     else:
                         captcha = Captcha()
                         if captcha.detect(event):
-                            captcha.solve(session)   
-                    
-                    
-                    #*Normal messages
-                    if message.title:
-                        #Profile update
-                        if message.title.find('Statistics for') > -1:
-                            profile.rebuildLists(event, 'stats')
-                            log(f'Stats information updated.')
-                            break
-                        elif message.title.find('Inventory of') > -1:
-                            profile.rebuildLists(event, 'inv')
-                            log('Profile information updated.')
-                            break
-                        
-                        
-                        if message.title == 'You caught:':
-                            message.buildList()
+                            captcha.solve()
                             break
                         else:
-                            debug(event)
-                            pass
-                    else:
-                        log(message.items_list[0])
-                        pass
-
+                            if message.title:
+                                #Profile update
+                                if message.title.find('Statistics for') > -1:
+                                    profile.rebuildLists(event, 'stats')
+                                    log(f'Stats information updated.')
+                                    pass
+                                if message.title.find('Inventory of') > -1:
+                                    profile.rebuildLists(event, 'inv')
+                                    log('Profile information updated.')
+                                    pass
+                                
+                                #Normal messages
+                                if message.title == 'You caught:':
+                                    message.buildList()
+                                    break
+                                else:
+                                    #Unhandled
+                                    debug(event)
+                                    pass
+                            else:
+                                #Untitled
+                                log(message.items_list[0])
+                                pass
         cooldown(cooldown_lifetime)
 
-
-
-#------------------------ MAIN --------------------------#
-
-
+#------------------------ INIT --------------------------#
 if __name__ == "__main__":
     if configLoader():
         
