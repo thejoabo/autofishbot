@@ -15,9 +15,10 @@ from configparser import ConfigParser
 
 #------------------------ CONSTANTS --------------------------#
 
+VERSION = '1.1.1'
 MARGIN = 1.5
-BOT_UID = "574652751745777665"
-REPO_CONFIG = 'https://github.com/thejoabo'
+BOT_UID = '574652751745777665'
+REPO_CONFIG = 'https://github.com/thejoabo/virtualfisher-bot/blob/main/assets/autofish.config'
 OPCODES = [
     {'code': 0, 'name': 'Dispatch', 'action': 'Receive', 'description': 'An event was dispatched.'},
     {'code': 1, 'name': 'Heartbeat', 'action': 'Send/Receive', 'description': 'Fired periodically by the client to keep the connection alive.'},
@@ -79,11 +80,6 @@ cooldown_lifetime= 0
 log_message = "[!] Welcome back."
 
 #-------------------- CONFIG LOADER --------------------#
-def to_bool(param: str) -> bool:
-    if param.lower() in ['1', 'true']:
-        return True
-    else:
-        return False
 
 def configLoader(param : str = 'default') -> bool:
     '''Generate and load configuration files'''
@@ -213,7 +209,6 @@ class discordWebgate:
     def _sendHeartbeat(self) -> None:
         while True:
             if self._keepAlive:
-                log('Heartbeat sent.', 'notice')
                 sleep(self._interval)
                 self.sendRequest({ 'op': 1, 'd': 'null' })
             else:
@@ -269,7 +264,7 @@ class Captcha:
     def solve(self) -> None:
         if self.image_url:
             #Generate captcha values using all engines
-            for engine in [2, 1, 3]: #[2, 3, 1]
+            for engine in [2, 1, 3]:
                 log(f'Using OCR Engine {engine}')
                 
                 payload = {
@@ -297,7 +292,7 @@ class Captcha:
                         log(f'OCR Engine {engine} failed to provide reasonable certainty.', 'notice')
                 else:
                     log(f'OCR Engine {engine} returned exit code {response["OCRExitCode"]}.', 'err')
-                sleep(1.5)
+                sleep(2)
         else:
             session.disconnect()
             debug(self.event)
@@ -313,22 +308,16 @@ class Message:
         if event == []:
             pass   
         else:
-            #this variables assignment will change in the future
             try: self.content = event['content']
-            except KeyError:
-                self.content = None
-            try: self.timestamp = event['timestamp']
-            except KeyError:
-                self.timestamp = None
-            
+            except KeyError: self.content = None
+                       
             for embed in event['embeds']:
                 try:
                     #*Main embed
                     if embed['title']:
                         self.title = embed['title']
                         try: self.description = embed['description']
-                        except KeyError:
-                            self.description = None
+                        except KeyError: self.description = None
                 except KeyError:
                     self.items_list.append(self.sanatize(embed['description']))
                 
@@ -338,26 +327,21 @@ class Message:
         content = sub(r'[\*_`\n]', '', content)#Remove Markdown
         return content
     
-    def buildList(self, custom_list = []):
+    def buildList(self, custom_list = [], profile = None):
         _tmp = self.description.split('\n')
         for line in _tmp:
             final = ''
-            if line.find('LEVEL') > -1:
+            if line.find('LEVEL UP!') > -1:
                 #Level up information
-                level = [int(x) for x in findall(r'\b\d+\b', line)]
-                final = f'<< LEVEL UP: {level[-1] - 1} -> {level[-1]} >>'
+                level = sub('[^\d+]', '', sub(r'<.+?> ', '', line))
+                final = f'<< LEVEL UP: {int(level) - 1} -> {level} >>'
             elif line.find('<:') > -1:
                 #Emotes 
-                #!FIX NEEDED
-                emotefix = line.split(' ')
-                for word in emotefix:
-                    if word.find('<:') < 0:
-                        final += f'{word} '
+                final = sub(r'  ', ' ', sub(r'<.+?>', '', line))
             elif line.find('#') > -1: 
                 #Global boost information
                 pass
-            elif line.find('Use **%bait**') > -1:
-                #Useless bait purchase line information
+            elif line == '' or line == None or line == '\n':
                 pass
             else:
                 final = line
@@ -439,44 +423,48 @@ class Profile:
                     lines = embed['description'].split('\n')
                     for line in lines:
                         if line != '':
-                            if line.find('Balance') > -1:
+                            if line.find('Balance:') > -1:
                                 #Balance
                                 self.balance = sub('[^\d+]', '', line)
                                 if len(self.balance) > 10:
-                                    self.balance = '{:.2e}'.format(int(self.balance))
+                                    self.balance = '$ {:.3e}'.format(int(self.balance))
+                                else:
+                                    self.balance = '$ {:,.2f}'.format(int(self.balance))
                             elif line.find('XP to next level.') > -1:
                                 #Level
-                                self.level = sub('[.*a-zA-Z]', '',  sub(', ', '|', line))
-                                self.level = sub(' ', '', self.level)
-                                self.level = f"{ sub('[|]', ' | ', self.level ) } XP"
+                                level = sub(' ', '', sub('[.*a-z]', '',  sub(', ', '|', line)))
+                                if level.startswith('P'):
+                                    level = sub('L', '|L', level) 
+                                else: level = sub('L', '', level)
+                                self.level = sub('\|', ' | ', level)
                             elif line.find('Rod') > -1:
                                 #Rod
                                 self.rod = sub(rf'{line[0]}.+?> ', '', line)
                                 self.rod = sub('[*.]', '', self.rod)
-                            elif line.find('biome') > -1:
+                            elif line.find('Current biome:') > -1:
                                 #Biome
                                 self.biome = sub(rf'{line[0]}.+?> ', '', line)
                                 self.biome = sub('[*.]', '', self.biome)
                                 #biome = line
-                            elif line.find('gold') > -1:
+                            elif line.find('Gold Fish') > -1:
                                 #Golden Fish
                                 golden = sub(r'<.+?> ', '', line)
                                 self.golden['current'] = sub('[^\d+$]', '', golden)
-                            elif line.find('emerald') > -1:
+                            elif line.find('Emerald Fish') > -1:
                                 #Emerald Fish
                                 emerald = sub(r'<.+?> ', '', line)
                                 self.emerald['current'] = sub('[^\d+$]', '', emerald)
-                            elif line.find('lava') > -1:
+                            elif line.find('Lava Fish') > -1:
                                 #Lava Fish
                                 lava = sub(r'<.+?> ', '', line)
                                 self.lava['current'] = sub('[^\d+$]', '', lava)
-                            elif line.find('diamond') > -1:
+                            elif line.find('Diamond Fish') > -1:
                                 #Diamond Fish
                                 diamond = sub(r'<.+?> ', '', line)
                                 self.diamond['current'] = sub('[^\d+$]', '', diamond)
         self.inventory = [
             {'title': 'INVENTORY     ', 'content': ''},
-            {'title': 'BALANCE:      ', 'content': f'${self.balance}'},
+            {'title': 'BALANCE:      ', 'content': f'{self.balance}'},
             {'title': 'LEVEL:        ', 'content': f'{self.level}'},
             {'title': 'ROD:          ', 'content': f'{self.rod}'},
             {'title': 'BIOME:        ', 'content': f'{self.biome}'},
@@ -485,8 +473,19 @@ class Profile:
             {'title': 'GOLD FISH:    ', 'content': f'{self.golden["current"]}'},
             {'title': 'EMERALD FISH: ', 'content': f'{self.emerald["current"]}'}
         ]
+            
+    
 
 #-------------------- AUX FUNCTIONS --------------------#
+
+def to_bool(param: str) -> bool:
+    '''Convert string to bool'''
+    if param.lower() in ['1', 'true']:
+        return True
+    elif param.lower() in ['0', 'false']:
+        return False
+    else:
+        exit(f'[E] Expected: true / false. Check your config file.')
 
 def autoBuff(_queries = ['%s all', '%inv', '%stats']):
     global session, disconnected, buff_countdown
@@ -497,13 +496,13 @@ def autoBuff(_queries = ['%s all', '%inv', '%stats']):
 
     #Bait resuply
     if BAIT:
-        _ammount = (( (BUFF_LENGTH  * 60) / USER_COOLDOWN) - 10) * 0.75 
-        _queries.append(f'%buy {BAIT} {ceil(_ammount)}')
+        _amount = (( (BUFF_LENGTH  * 60) / USER_COOLDOWN) - 10) * 0.75 
+        _queries.append(f'%buy {BAIT} {ceil(_amount)}')
 
     #Needed to continue fishing
     _queries.append('%f')
     
-    def resuply(gc):
+    def resuply(gc: any = None):
         for _query in _queries:
             try:
                 while captcha.detected:
@@ -514,6 +513,7 @@ def autoBuff(_queries = ['%s all', '%inv', '%stats']):
                 log(f'Failed to send query -> {e}', 'e')
     
     while not disconnected:
+        buff_countdown = 0
         pause(resuply)
         countdown = (BUFF_LENGTH * 60)
         for seconds in range(countdown):
@@ -525,7 +525,6 @@ def autoBuff(_queries = ['%s all', '%inv', '%stats']):
 
 def log(message : any, type: str = 'normal') -> None:
     global log_message
-    debug(message)
     msg = sub(r'\n\r', '', str(message))
     if type == 'normal':
         log_message = f'[*] {msg}'
@@ -533,19 +532,28 @@ def log(message : any, type: str = 'normal') -> None:
         log_message = f'[!] {msg}'
     else:
         log_message = f'[E] {msg}'
+    debug(message)
 
 def resize(message : str, max_width: int, delimiter: str = '...') -> str:
+    '''Resize any string to a fixed length
+    
+    message : str
+        raw string to be resized
+    max_width : int
+        maximum allowed length
+    delimiter : str = '...'
+        arbitrary string to indicate continuity
+    '''
     if len(message) > max_width:
         return f'{message[:max_width - len(delimiter)]}{delimiter}'
     return message
 
-def buffstatus(param: bool):
+def buffstatus(param: bool) -> str:
     if param: return 'ON'
     else: return 'OFF'
 
-def debug(event):
-    if DEBUG:
-        print(f'\n\n{event}\n\n')
+def debug(event: any, caller: object = None) -> None:
+    if DEBUG: print(f'\n\n{event}\n\n')
 
 def pause(func: object = None, fparam: any = None, resumefunc: object = None, rparam: any = None) -> None:
     global fish_paused
@@ -634,13 +642,10 @@ def drawMenu(stdscr):
             column = width - round((75 * width) / 100)
             row = round((30 * height) / 100)
             m_height, m_width, m_column = (height // 2), (width // 2), (column // 2)
-            #!stdscr.addstr(m_height, m_width, "C") #absolute center
-            
-            #mininum
-            # 112 -> width
-            # 35 -> height
-            if width < 112 or height < 35:
-                size_inf = ['[MENU]', 'Mininum size: 112 x 35', f'Current: {width} x {height}']
+
+            #Check screen size
+            if width < 112 or height < 37:
+                size_inf = ['[MENU]', 'Mininum size: 112 x 37', f'Current: {width} x {height}']
                 for k, line in enumerate(size_inf):
                     stdscr.addstr(m_height + k - 1, m_width - (len(line) // 2), line)
             else:
@@ -732,7 +737,9 @@ def drawMenu(stdscr):
         except KeyboardInterrupt:
             break
         except Exception as e:
-            exit(f'[E] Something wen\'t wrong -> {e}') 
+            exit(f'[E] Something went wrong -> {e}') 
+
+
 
 
 #------------------------ MAIN --------------------------#
@@ -754,7 +761,6 @@ def main():
                     answer = captcha.answerList.pop(0)
                     session.sendQuery(f'%verify {answer}')
                 else:
-                    print(f'{captcha.answerList=} | Empty, should regen ! If you are seem this, please open an issue.')
                     atp += 1
                     session.sendQuery('%verify regen')
                     captcha.reset()
@@ -763,7 +769,12 @@ def main():
                 log(f'Manual captcha is required. -> {e}', 'e')
         
         while True:
-            response = session.recieveEvent()
+            try: response = session.recieveEvent()
+            except websocket.WebSocketConnectionClosedException as e:
+                log(f'Connection lost -> {e}. Attempting to reconnect', 'e')
+                session.connect()
+            except Exception as e:
+                exit(f'[E] Something went wrong -> {e}')
             if response['t'] in ['MESSAGE_CREATE', 'MESSAGE_UPDATE']:
                 event = response['d']
 

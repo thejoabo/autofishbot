@@ -1,6 +1,15 @@
 # Changelog
+##  v1.1.1 - 7/23/21 (current)
+#### **Added**
+- [diamond fish information](https://github.com/thejoabo/virtualfisher-bot/pull/11) (@yudhistiraindyka)
+#### **Changed**
+- regex method to handle emotes
+- regex method to display balance
+#### **Fixed**
+- regex pattern to user level on "Inventory" tab (added support to prestige)
+- regex patter to display "Level up" information  
 
-##  v1.1.0 - 7/22/21 (current)
+##  v1.1.0 - 7/22/21
 #### **Added**
 - window size detection function
 - proper pause/resume function
@@ -10,8 +19,6 @@
 #### **Fixed**
 - messages desyncs (due to unhandled events)
 - profile information scraping 
-
-<hr>
 
 ##  v1.0.0 - 7/21/21 
 #### **Added**

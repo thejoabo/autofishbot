@@ -38,7 +38,7 @@ buff_length = 5 / 20
 <hr>
 
 ## Captcha Information
-Virtual Fisher has now removed almost every captcha. The only one left is the image recognition one. They also changed how those images are generated, so **preprocessing is no longer required**. The OCR.SPACE API for image to text recognition seems to work with reasonable consistency in the tests performed. Therefore, to automatically solve captcha you **will need** an [API KEY](#how-do-i-get-my-free-key).
+Virtual Fisher has now removed almost every captcha. The only one left is the image recognition one. They also changed how those images are generated, so **preprocessing is no longer required**. The OCR.SPACE API for image to text recognition seems to work with reasonable consistency in the tests performed. Therefore, to automatically solve captcha you **will need** an [API KEY](#how-do-i-get-my-free-key-).
 
 The metodology is pretty straight forward, when a new captcha is detected:
 
@@ -62,17 +62,15 @@ For now this is the only way. But I'm thinking about the possibility of making a
 
 
 ## Changelog
-
-###  v1.1.0 - 7/22/21 (current)
+###  v1.1.1 - 7/23/21 (current)
 #### **Added**
-- window size detection function
-- proper pause/resume function
+- [diamond fish information](https://github.com/thejoabo/virtualfisher-bot/pull/11) (@yudhistiraindyka)
 #### **Changed**
-- captcha detection method
-- messages alignment (centered)
+- regex method to handle emotes
+- regex method to display balance
 #### **Fixed**
-- messages desyncs (due to unhandled events)
-- profile information scraping 
+- regex pattern to user level on "Inventory" tab (added support to prestige)
+- regex patter to display "Level up" information  
 
 ...
 
@@ -82,5 +80,5 @@ For now this is the only way. But I'm thinking about the possibility of making a
 ## Contributing
 - Pull requests are welcome. For major changes, open an issue first to discuss what you would like to change.
 - If you notice any errors, bugs or strange behavior **[PLEASE OPEN AN ISSUE](https://github.com/thejoabo/virtualfisher-bot/issues/new)** containing a screenshot or describing the problem.
-- Suggestions are welcome.
+- [**Suggestions**](https://github.com/thejoabo/virtualfisher-bot/discussions/new) are welcome.
 
