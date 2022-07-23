@@ -376,6 +376,7 @@ class Profile:
         self.golden = {'total': None, 'current': None}
         self.emerald = {'total': None, 'current': None}
         self.lava = {'total': None, 'current': None}
+        self.diamond = {'total': None, 'current': None}
         self.crates = None
         self.quests = None
         self.trips = None
@@ -417,8 +418,11 @@ class Profile:
                                 self.emerald['total'] = sub('[^\d+]', '', line)
                             elif line.find('lava') > -1:
                                 self.lava['total'] = sub('[^\d+$]', '', line)
+                            elif line.find('diamond') > -1:
+                                self.diamond['total'] = sub('[^\d+$]', '', line)
         self.stats = [
             {'title': 'TOTAL STATS   ', 'content': ''},
+            {'title': 'DIAMOND:      ', 'content': f'{self.diamond["total"]}'},
             {'title': 'LAVA:         ', 'content': f'{self.lava["total"]}'},
             {'title': 'GOLDEN:       ', 'content': f'{self.golden["total"]}'},
             {'title': 'EMERALD:      ', 'content': f'{self.emerald["total"]}'},
@@ -466,12 +470,17 @@ class Profile:
                                 #Lava Fish
                                 lava = sub(r'<.+?> ', '', line)
                                 self.lava['current'] = sub('[^\d+$]', '', lava)
+                            elif line.find('diamond') > -1:
+                                #Diamond Fish
+                                diamond = sub(r'<.+?> ', '', line)
+                                self.diamond['current'] = sub('[^\d+$]', '', diamond)
         self.inventory = [
             {'title': 'INVENTORY     ', 'content': ''},
             {'title': 'BALANCE:      ', 'content': f'${self.balance}'},
             {'title': 'LEVEL:        ', 'content': f'{self.level}'},
             {'title': 'ROD:          ', 'content': f'{self.rod}'},
             {'title': 'BIOME:        ', 'content': f'{self.biome}'},
+            {'title': 'DIAMOND FISH: ', 'content': f'{self.diamond["current"]}'},
             {'title': 'LAVA FISH:    ', 'content': f'{self.lava["current"]}'},
             {'title': 'GOLD FISH:    ', 'content': f'{self.golden["current"]}'},
             {'title': 'EMERALD FISH: ', 'content': f'{self.emerald["current"]}'}
