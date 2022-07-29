@@ -338,6 +338,9 @@ class Message:
             elif line.find('<:') > -1:
                 #Emotes 
                 final = sub(r'  ', ' ', sub(r'<.+?>', '', line))
+            elif line.find(':') > -1:
+                #Duplicator Emote
+                final = sub(r'  ', ' ', sub(r':.+?: ', '', line))
             elif line.find('#') > -1: 
                 #Global boost information
                 pass
