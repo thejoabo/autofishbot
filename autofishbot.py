@@ -1,37 +1,25 @@
 #------------------------ IMPORTS --------------------------#
 import json
-import curses #pip install windows-curses / curses (linux)
 import requests
 import websocket 
-import webbrowser
-from threading import Thread
-from os import getcwd, path, system
-from re import sub, findall
+from re import sub
 from math import ceil
-from time import sleep
-from random import uniform, randint
-from configparser import ConfigParser
+from random import randint
+from time import sleep, time
+from threading import Thread
+from app.MenuManager import MainMenu
+from app.Util import pauser, debugger
+from app.CooldownManager import Cooldown
+from app.ConfigManager import ConfigManager
+from app.DiscordWebgate import DiscordWebgate
 
 
 #------------------------ CONSTANTS --------------------------#
 
-VERSION = '1.1.1'
-MARGIN = 1.5
+VERSION = '1.2.0'
 BOT_UID = '574652751745777665'
-REPO_CONFIG = 'https://github.com/thejoabo/virtualfisher-bot/blob/main/assets/autofish.config'
-OPCODES = [
-    {'code': 0, 'name': 'Dispatch', 'action': 'Receive', 'description': 'An event was dispatched.'},
-    {'code': 1, 'name': 'Heartbeat', 'action': 'Send/Receive', 'description': 'Fired periodically by the client to keep the connection alive.'},
-    {'code': 2, 'name': 'Identify', 'action': 'Send', 'description': 'Starts a new session during the initial handshake.'},
-    {'code': 3, 'name': 'Presence Update', 'action': 'Send', 'description': 'Update the client\'s presence.'},
-    {'code': 4, 'name': 'Voice State Update', 'action': 'Send', 'description': 'Used to join/leave or move between voice channels.'},
-    {'code': 6, 'name': 'Resume', 'action': 'Send', 'description': 'Resume a previous session that was disconnected.'},
-    {'code': 7, 'name': 'Reconnect', 'action': 'Receive', 'description': 'You should attempt to reconnect and resume immediately.'},
-    {'code': 8, 'name': 'Request Guild Members', 'action': 'Send', 'description': 'Request information about offline guild members in a large guild.'},
-    {'code': 9, 'name': 'Invalid Session', 'action': 'Receive', 'description': 'The session has been invalidated. You should reconnect and identify/resume accordingly.'},
-    {'code': 10, 'name': 'Hello', 'action': 'Receive', 'description': 'Sent immediately after connecting, contains the heartbeat_interval to use.'},
-    {'code': 11, 'name': 'Heartbeat ACK', 'action': 'Receive', 'description': 'Sent in response to receiving a heartbeat to acknowledge that it has been received.'},
-]
+MAX_ATTEMPTS = 3
+CONFIG = ConfigManager()
 QUERYS = [
     {'CODE': 0, 'PAYLOAD': ['%fish', '%f'], 'ACTION': 'Catch some fish.'},
     {'CODE': 1, 'PAYLOAD': ['%sell all', '%s all'], 'ACTION': 'Sell all the fishes you caught.'},
@@ -42,233 +30,93 @@ QUERYS = [
     {'CODE': 6, 'PAYLOAD': {'default' : ['%top', '%servertop'], 'options' : ['xp', 'money', 'fish', 'quests', 'chests', 'net', 'weekly']}, 'ACTION': 'View the global or server leaderboards.'},
     {'CODE': 7, 'PAYLOAD': ['%verify', '%v'], 'ACTION': 'Verifies captcha result.'}
 ]
-MENUART = """ ___        _         ___  _      _     ___       _   
-/   \ _  _ | |_  ___ | __|(_) ___| |_  | _ ) ___ | |_ 
-| - || || ||  _|/ _ \| _| | |(_-/|   \ | _ \/ _ \|  _|
-|_|_| \_._| \__|\___/|_|  |_|/__/|_||_||___/\___/ \__|"""
-
-MENUART2 = [
-    ' ▀▄▀ ▄▀▄ █ █   ▄▀▀ ▄▀▄ █ █ ▄▀  █▄█ ▀█▀',
-    '  █  ▀▄▀ ▀▄█   ▀▄▄ █▀█ ▀▄█ ▀▄█ █ █  █ '
-]
-
-KEYBINDS = [
-    {'key': 'KEYBINDS ', 'description': '   INFORMATION   '},
-    {'key': '   Q     ', 'description': '   Exit         '},
-    {'key': '   p     ', 'description': '   Pause/resume '},
-    {'key': '   u     ', 'description': '   Update info  '},
-    {'key': '   H     ', 'description': '   Help Page    '},
-    {'key': '   M     ', 'description': '   Manual mode  '}
-    ]
-
-DEBUG = False
+ 
 
 #------------------------ VARIABLES --------------------------#
 
+#Class variables
+session = DiscordWebgate(CONFIG.user_token, CONFIG.channel_id, auto_connect=False)
+cd = Cooldown(CONFIG.user_cooldown)
+debugger.setactive(CONFIG.debug)
+menu = MainMenu(autorun=False)
+pauser.setmenu(menu)
+
+
 #Switches
 disconnected = False
-fish_paused = False
-in_cooldown = False
-
-#Counters
-streak = 0
-bypasses = 0
-buff_countdown = 0
-cooldown_lifetime= 0
-
-#Strings
-log_message = "[!] Welcome back."
-
-#-------------------- CONFIG LOADER --------------------#
-
-def configLoader(param : str = 'default') -> bool:
-    '''Generate and load configuration files'''
-    global CHANNEL_ID,USER_TOKEN,USER_COOLDOWN,BAIT,AUTO_BUFF,AUTOFISH_ON_EXIT,BUFF_LENGTH,OCR_API_KEY
-
-    configPath = f'{getcwd()}/autofish.config'
-
-    if path.isfile(configPath) and param == 'default':
-        try:
-            config = ConfigParser()
-            config.read(configPath)
-            cfg = config['PREFERENCES']
-            
-            #?-------------------- USER CONSTANTS --------------------#
-            CHANNEL_ID = cfg['CHANNEL_ID']
-            USER_TOKEN = cfg['USER_TOKEN']
-            OCR_API_KEY = cfg['OCR_API_KEY']
-            USER_COOLDOWN = float(cfg['USER_COOLDOWN']) 
-            BAIT = cfg['BAIT']
-            AUTO_BUFF = to_bool(cfg['AUTO_BUFF']) 
-            _tmp = int(cfg['BUFF_LENGTH'])
-            if _tmp or _tmp != 0:
-                if _tmp > 12.5: BUFF_LENGTH = 20
-                else: BUFF_LENGTH = 5
-            else: BUFF_LENGTH = 5
-            #?---------------------------------------------------------#
-            
-            return True
-        except Exception as e:
-            print(f'\n[E] Config couldn\'t be loaded -> {e}')
-            configLoader('force')
-    else:
-        if path.isfile(configPath) and param == 'force':
-            print(f'\n[E] Configuration exists but doesn\'t follow the expected format.')
-            if input(f'Would you like to generate a new one ? (y/n)').lower() == 'n':
-                exit(f'[!] User exited.')
-        
-        #*CREATE NEW CONFIG
-        newConfig = ConfigParser()
-        newConfig['PREFERENCES'] = {
-                'CHANNEL_ID' : 'YOUR CHANNEL ID',
-                'USER_TOKEN' : 'YOUR TOKEN',
-                'OCR_API_KEY' : 'YOUR API KEY',
-                'USER_COOLDOWN' : 'YOUR COOLDOWN',
-                'BAIT' : 'WORMS, LEECHES, ...',
-                'AUTO_BUFF' : 'TRUE',
-                'BUFF_LENGTH' : '5'
-        }
-        try:
-            with open(configPath, 'w') as f:
-                newConfig.write(f)
-            exit_message = f'\n[!] Config successfully created at "{configPath}".\n[!] Please fill in the configuration information...'
-            webbrowser.open(configPath)
-        except webbrowser.Error as e:
-            exit_message = f'\n[E] Unable to open default text editor, please edit it manually.\n[!] Details: {e}'
-        except Exception as e:
-            exit_message =f'\n[E] Unable to create new config -> {e}\n[!] NOTE: If keeps failing download a sample config file at: {REPO_CONFIG}'
-        finally:
-            exit(exit_message)
 
 
-
-#-------------------- CLASSES --------------------#
-
-class discordWebgate:
-    def __init__(self, auto_connect = True, payload = None) -> None:
-        self._query = f'https://discord.com/api/v9/channels/{CHANNEL_ID}/messages'
-        self._webgateApi = 'wss://gateway.discord.gg/?v=9&encoding=json'
-        self._payload = {
-                'op': 2,
-                'd': { 
-                    'token': USER_TOKEN,
-                    'properties': { 
-                        '$os': 'windows',
-                        "$browser": 'chrome',
-                        '$device': 'pc'
-                    }
-                }
-            }
-        self._ws = websocket.WebSocket()
-        self._keepAlive = True
-        if auto_connect:
-            self.connect()  
-            self.sendRequest()
-            print('[*] Session stablished !')
-     
-    def connect(self) -> None:
-        try:
-            self._ws.connect(self._webgateApi)
-            self._interval = self._getInterval()
-            self._heartbeathread = Thread(target=self._sendHeartbeat, daemon=True)
-            self._heartbeathread.start()
-        except Exception as e:
-            exit(f'\n[E] Something went wrong while connecting: {e}')
-    
-    def disconnect(self) -> bool:
-        try:
-            self._keepAlive = False
-            self._ws.close()  
-            return True
-        except Exception as e:
-            print(f'\n[E] Something went wrong while disconnecting: {e}')
-            return False
-        
-    def recieveEvent(self) -> list:
-        _response = self._ws.recv()
-        if _response:
-            return json.loads(_response)
-        
-    def sendQuery(self, payload) -> None:
-        r = requests.post(self._query, data = {'content': payload}, headers = {'authorization': USER_TOKEN})
-   
-    def sendRequest(self, request = None) -> None:
-        if request:
-            _request = request
-        else:
-            _request = self._payload
-        self._ws.send(json.dumps(_request))
-    
-    def _getInterval(self) -> int:
-        try:
-            tmp = self.recieveEvent()
-            return int(tmp['d']['heartbeat_interval']) / 1000
-        except:
-            return int(41.25)
-    
-    def _sendHeartbeat(self) -> None:
-        while True:
-            if self._keepAlive:
-                sleep(self._interval)
-                self.sendRequest({ 'op': 1, 'd': 'null' })
-            else:
-                break
-
-
+#-------------------------- CLASSES --------------------------#
 class Captcha:
     def __init__(self) -> None:
+        self.ocr_url = 'https://api.ocr.space/parse/image'
         self.reset()
-        pass
     
     def reset(self) -> None:
         self.event = None
+        self.embeds = None
+        self.content = None
+        
+        #Changeable
         self.solved = False
         self.detected = False
-        self.embed = None
-        self.content = None
-        self.ocr_url = 'https://api.ocr.space/parse/image'
-        self.answerList = []
+        self.solving = False
+        self.regens = 0
+        self.answer_list = []
+        return None
+
 
     def detect(self, event) -> bool:
         self.event = event
-        if len(event['embeds']) > 0:
-            self.embed = event['embeds']
-            for item in self.embed:
-                for testcase in ['captcha', 'verify']:
-                    if str(item).find(testcase) > -1:
-                        #*Image verification
-                        try: 
-                            self.image_url = item['image']['url']
-                            self.detected = True 
-                            return True
-                        except KeyError:
-                            self.image_url = None
-                        
-                        try: self.description = item['description']
-                        except KeyError:
-                            self.description = None
-                            
-                        if event['content']:
-                            self.content = event['content']
-                        self.detected = True 
-                        return True
-            self.solved = True
-            return False
+        #Costs more memory but is safer
+        for target in ['captcha', '%verify']:
+            if str(event).find(target) > -1:
+                #Captcha detected
+                self.detected = True
+                break
+            else: 
+                pass
+        
+        if self.detected:
+            if len(self.event['embeds']) > 0:
+                self.embeds = self.event['embeds']
+                for item in self.embeds:
+                    try: #Assign Image 
+                        self.image_url = item['image']['url']
+                        break
+                    except KeyError:
+                        if item['description'].find('solve the captcha posted above') > -1:
+                            debugger.debug(f'{self.detected=} | {self.event=} | Cause: query sent after captcha detection.', 'Captcha')
+                        else:
+                            debugger.debug(f'{self.detected=} | {self.event=} | Cause: Unkown type. No image but flagged as target.', 'Captcha')
+                        print('\nERR ! Report the log above in: https://github.com/thejoabo/virtualfisher-bot/issues/new')
+                        menu.kill()
+                
+                #Image detected in embed
+                return True
+            else:
+                debugger.debug(f'{self.detected=} | {self.event=} | Cause: No embeds but flagged as target', 'Captcha')
+                print('\nERR ! Report the log above in: https://github.com/thejoabo/virtualfisher-bot/issues/new')
+                menu.kill()
         else:
-            if str(event).find('%verify') > -1:
-                #Is captcha
-                debug(event)
-                exit(f'[E] Unknown captcha.')
-                #return True
-
+            #Not detected
+            return False
+        
     def solve(self) -> None:
         if self.image_url:
+            self.solving = True
+            self.answer_list = []
+            
             #Generate captcha values using all engines
             for engine in [2, 1, 3]:
-                log(f'Using OCR Engine {engine}')
+                notify(f'Using OCR Engine {engine}')
+                if engine in [3, 5]:
+                    notify(f'Using OCR Engine {engine} | This engine may take longer to return.', 'notice')
+                else:
+                    notify(f'Using OCR Engine {engine}')
                 
                 payload = {
-                    'apikey': OCR_API_KEY,
+                    'apikey': CONFIG.ocr_api_key,
                     'url': self.image_url,
                     'isOverlayRequired': False,
                     'detectOrientation': True,
@@ -281,53 +129,65 @@ class Captcha:
                 r = requests.post(self.ocr_url, data=payload)
                 response = json.loads(r.content.decode())
 
-                #Filter results there are reasonable
+                #Filter results which are reasonable
                 if response['OCRExitCode'] == 1:
-                    answer = sub(r'/[\@a-zA-Z0-9]/g', '', response['ParsedResults'][0]['ParsedText'])
-                    answer = sub('[\n\r ]', '', answer)
+                    raw = response['ParsedResults'][0]['ParsedText']
+                    answer = sub('[\n\r ]', '', sub(r'/[\@a-zA-Z0-9]/g', '', raw))
                     if len(answer) == 6:
-                        log(f'The code \'{answer}\' was added to possible results.')
-                        self.answerList.append(answer)
+                        if answer not in self.answer_list:
+                            #New valid result
+                            notify(f'The code \'{answer}\' was added to possible results.')
+                            self.answer_list.append(answer)
+                        else: 
+                            #Duplicate result
+                            notify(f'Duplicate result (\'{answer}\') ignored.', 'notice')
                     else:
-                        log(f'OCR Engine {engine} failed to provide reasonable certainty.', 'notice')
+                        #Invalid results
+                        notify(f'OCR Engine {engine} failed to provide reasonable certainty | Result: "{answer}".', 'notice')
                 else:
-                    log(f'OCR Engine {engine} returned exit code {response["OCRExitCode"]}.', 'err')
-                sleep(2)
+                    #API error
+                    notify(f'OCR Engine {engine} returned exit code {response["OCRExitCode"]}.', 'err')
+                sleep(0.5) 
+            self.solving = False
+            
+            return None
         else:
-            session.disconnect()
-            debug(self.event)
-            print('should exit here. if you are seeing this, report on github')
-            exit('[E] Unknown captcha.')
-
+            debugger.debug(f'{self.detected=} | {self.event=} | Cause: Assigned to solve but no image found.', 'Captcha')
+            print('\nERR ! Report the log above in: https://github.com/thejoabo/virtualfisher-bot/issues/new')
+            menu.kill()
 
 class Message:
     def __init__(self, event = []) -> None:
         self.items_list = []
         self.title = None
-               
-        if event == []:
-            pass   
-        else:
+         
+        if event != []:
             try: self.content = event['content']
-            except KeyError: self.content = None
+            except KeyError as e: 
+                debugger.debug(e, 'Exception')
+                self.content = None
                        
             for embed in event['embeds']:
                 try:
-                    #*Main embed
+                    #Main embed
                     if embed['title']:
                         self.title = embed['title']
                         try: self.description = embed['description']
-                        except KeyError: self.description = None
+                        except KeyError as e: 
+                            self.description = None
                 except KeyError:
                     self.items_list.append(self.sanatize(embed['description']))
-                
-    def sanatize(self, content):
-        content = sub(r':.+?: ', '', content)#Remove any emotes
-        content = sub(r'\n', ' ', content)#Remove new lines
-        content = sub(r'[\*_`\n]', '', content)#Remove Markdown
+                except Exception as e:
+                    debugger.debug(e, 'Exception')
+        else:
+            pass
+
+    def sanatize(self, content : any) -> str:
+        content = sub(r':.+?: ', '', str(content))
+        content = sub(r'[\*_`\n<>]', '', content)
         return content
     
-    def buildList(self, custom_list = [], profile = None):
+    def buildList(self, custom_list: list = []) -> None:
         _tmp = self.description.split('\n')
         for line in _tmp:
             final = ''
@@ -339,7 +199,7 @@ class Message:
                 #Emotes 
                 final = sub(r'  ', ' ', sub(r'<.+?>', '', line))
             elif line.find(':') > -1:
-                #Duplicator Emote
+                #Duplicator Emote (and commom emotes)
                 final = sub(r'  ', ' ', sub(r':.+?: ', '', line))
             elif line.find('#') > -1: 
                 #Global boost information
@@ -351,7 +211,7 @@ class Message:
             self.items_list.append(sub('[\*+]', '', final))
         if custom_list != []:
             self.items_list = custom_list + self.items_list
-
+        return None
 
 class Profile:
     def __init__(self, event = []) -> None:
@@ -368,45 +228,46 @@ class Profile:
         self.quests = None
         self.trips = None
         self.daily = None
-        self.buildInventory(event)
-        self.buildStats(event)
 
-    def update(self, session : discordWebgate) -> None:
-        for query in self.queries + ['%f']:
-            session.sendQuery(query)
+    def update(self, session : DiscordWebgate = session) -> None:
+        for query in self.queries:
+            session.send_query(query)
             sleep(2)
-        return
+        return None
 
-    def rebuildLists(self, event, target) -> None:
+    def rebuild_lists(self, event, target) -> None:
         if target == 'inv':
-            self.buildInventory(event)
+            self.build_inventory(event)
         elif target == 'stats':
-            self.buildStats(event)
+            self.build_stats(event)
+        return None
 
-    def buildStats(self, event) -> None:
+    def build_stats(self, event) -> None:
         if event != []:
             for embed in event['embeds']:
+                try: embed['title']
+                except KeyError: continue
                 if embed['title'].find('Statistics for') > -1:
                     lines = embed['description'].split('\n')
                     for line in lines:
-                        if line != '':
-                            line = sub(r'<.+?> ', '', line)
-                            if line.find('crates') > -1:
-                                self.crates = sub('[^\d+]', '', line)
-                            elif line.find('quests') > -1:
-                                self.quests = sub('[^\d+]', '', line)
-                            elif line.find('trips') > -1:
-                                self.trips = sub('[^\d+]', '', line)
-                            elif line.find('daily') > -1:
-                                self.daily = sub('[^\d+]', '', line)
-                            elif line.find('golden') > -1:
-                                self.golden['total'] = sub('[^\d+]', '', line)
-                            elif line.find('emerald') > -1:
-                                self.emerald['total'] = sub('[^\d+]', '', line)
-                            elif line.find('lava') > -1:
-                                self.lava['total'] = sub('[^\d+$]', '', line)
-                            elif line.find('diamond') > -1:
-                                self.diamond['total'] = sub('[^\d+$]', '', line)
+                        if line == '': continue
+                        line = sub(r'<.+?> ', '', line)
+                        if line.find('crates') > -1:
+                            self.crates = sub('[^\d+]', '', line)
+                        elif line.find('quests') > -1:
+                            self.quests = sub('[^\d+]', '', line)
+                        elif line.find('trips') > -1:
+                            self.trips = sub('[^\d+]', '', line)
+                        elif line.find('daily') > -1:
+                            self.daily = sub('[^\d+]', '', line)
+                        elif line.find('golden') > -1:
+                            self.golden['total'] = sub('[^\d+]', '', line)
+                        elif line.find('emerald') > -1:
+                            self.emerald['total'] = sub('[^\d+]', '', line)
+                        elif line.find('lava') > -1:
+                            self.lava['total'] = sub('[^\d+$]', '', line)
+                        elif line.find('diamond') > -1:
+                            self.diamond['total'] = sub('[^\d+$]', '', line)
         self.stats = [
             {'title': 'TOTAL STATS   ', 'content': ''},
             {'title': 'DIAMOND:      ', 'content': f'{self.diamond["total"]}'},
@@ -419,52 +280,54 @@ class Profile:
             {'title': 'DAILY STREAK: ', 'content': f'{self.daily}'},
         ]
         
-    def buildInventory(self, event) -> None:
+    def build_inventory(self, event) -> None:
         if event != []:
             for embed in event['embeds']:
+                try: embed['title']
+                except KeyError: continue
                 if embed['title'].find('Inventory of') > -1:
                     lines = embed['description'].split('\n')
                     for line in lines:
-                        if line != '':
-                            if line.find('Balance:') > -1:
-                                #Balance
-                                self.balance = sub('[^\d+]', '', line)
-                                if len(self.balance) > 10:
-                                    self.balance = '$ {:.3e}'.format(int(self.balance))
-                                else:
-                                    self.balance = '$ {:,.2f}'.format(int(self.balance))
-                            elif line.find('XP to next level.') > -1:
-                                #Level
-                                level = sub(' ', '', sub('[.*a-z]', '',  sub(', ', '|', line)))
-                                if level.startswith('P'):
-                                    level = sub('L', '|L', level) 
-                                else: level = sub('L', '', level)
-                                self.level = sub('\|', ' | ', level)
-                            elif line.find('Rod') > -1:
-                                #Rod
-                                self.rod = sub(rf'{line[0]}.+?> ', '', line)
-                                self.rod = sub('[*.]', '', self.rod)
-                            elif line.find('Current biome:') > -1:
-                                #Biome
-                                self.biome = sub(rf'{line[0]}.+?> ', '', line)
-                                self.biome = sub('[*.]', '', self.biome)
-                                #biome = line
-                            elif line.find('Gold Fish') > -1:
-                                #Golden Fish
-                                golden = sub(r'<.+?> ', '', line)
-                                self.golden['current'] = sub('[^\d+$]', '', golden)
-                            elif line.find('Emerald Fish') > -1:
-                                #Emerald Fish
-                                emerald = sub(r'<.+?> ', '', line)
-                                self.emerald['current'] = sub('[^\d+$]', '', emerald)
-                            elif line.find('Lava Fish') > -1:
-                                #Lava Fish
-                                lava = sub(r'<.+?> ', '', line)
-                                self.lava['current'] = sub('[^\d+$]', '', lava)
-                            elif line.find('Diamond Fish') > -1:
-                                #Diamond Fish
-                                diamond = sub(r'<.+?> ', '', line)
-                                self.diamond['current'] = sub('[^\d+$]', '', diamond)
+                        if line == '': pass
+                        elif line.find('Balance:') > -1:
+                            #Balance
+                            self.balance = sub('[^\d+]', '', line)
+                            if len(self.balance) > 10:
+                                self.balance = '$ {:.3e}'.format(int(self.balance))
+                            else:
+                                self.balance = '$ {:,.2f}'.format(int(self.balance))
+                        elif line.find('XP to next level.') > -1:
+                            #Level
+                            level = sub(' ', '', sub('[.*a-z]', '',  sub(', ', '|', line)))
+                            if level.startswith('P'):
+                                level = sub('L', '|L', level) 
+                            else: level = sub('L', '', level)
+                            self.level = sub('\|', ' | ', level)
+                        elif line.find('Rod') > -1:
+                            #Rod
+                            self.rod = sub(rf'{line[0]}.+?> ', '', line)
+                            self.rod = sub('[*.]', '', self.rod)
+                        elif line.find('Current biome:') > -1:
+                            #Biome
+                            self.biome = sub(rf'{line[0]}.+?> ', '', line)
+                            self.biome = sub('[*.]', '', self.biome)
+                            #biome = line
+                        elif line.find('Gold Fish') > -1:
+                            #Golden Fish
+                            golden = sub(r'<.+?> ', '', line)
+                            self.golden['current'] = sub('[^\d+$]', '', golden)
+                        elif line.find('Emerald Fish') > -1:
+                            #Emerald Fish
+                            emerald = sub(r'<.+?> ', '', line)
+                            self.emerald['current'] = sub('[^\d+$]', '', emerald)
+                        elif line.find('Lava Fish') > -1:
+                            #Lava Fish
+                            lava = sub(r'<.+?> ', '', line)
+                            self.lava['current'] = sub('[^\d+$]', '', lava)
+                        elif line.find('Diamond Fish') > -1:
+                            #Diamond Fish
+                            diamond = sub(r'<.+?> ', '', line)
+                            self.diamond['current'] = sub('[^\d+$]', '', diamond)
         self.inventory = [
             {'title': 'INVENTORY     ', 'content': ''},
             {'title': 'BALANCE:      ', 'content': f'{self.balance}'},
@@ -476,375 +339,215 @@ class Profile:
             {'title': 'GOLD FISH:    ', 'content': f'{self.golden["current"]}'},
             {'title': 'EMERALD FISH: ', 'content': f'{self.emerald["current"]}'}
         ]
-            
-    
 
-#-------------------- AUX FUNCTIONS --------------------#
 
-def to_bool(param: str) -> bool:
-    '''Convert string to bool'''
-    if param.lower() in ['1', 'true']:
-        return True
-    elif param.lower() in ['0', 'false']:
-        return False
-    else:
-        exit(f'[E] Expected: true / false. Check your config file.')
+#------------------------ AUX FUNCTIONS ------------------------#
 
-def autoBuff(_queries = ['%s all', '%inv', '%stats']):
-    global session, disconnected, buff_countdown
+def autoBuff(session : DiscordWebgate, _queries = ['%s all', '%inv', '%stats']):
+    global disconnected, captcha
     
     #More fish and more treasure
-    if AUTO_BUFF:
-        _queries = _queries + [f'%buy fish{BUFF_LENGTH}m', f'%buy treasure{BUFF_LENGTH}m']
+    if CONFIG.auto_buff:
+        _queries = _queries + [f'%buy fish{CONFIG.buff_length}m', f'%buy treasure{CONFIG.buff_length}m']
 
     #Bait resuply
-    if BAIT:
-        _amount = (( (BUFF_LENGTH  * 60) / USER_COOLDOWN) - 10) * 0.75 
-        _queries.append(f'%buy {BAIT} {ceil(_amount)}')
+    if CONFIG.bait:
+        _amount = (( (CONFIG.buff_length  * 60) / CONFIG.user_cooldown) - 10) * 0.75 
+        _queries.append(f'%buy {CONFIG.bait} {ceil(_amount)}')
 
-    #Needed to continue fishing
-    _queries.append('%f')
-    
-    def resuply(gc: any = None):
+    def resuply(e = None) -> None:
         for _query in _queries:
             try:
-                while captcha.detected:
-                    sleep(1)
-                session.sendQuery(_query)
+                while captcha.detected: 
+                    sleep(1) #waits until solved
+                session.send_query(_query)
                 sleep(2)
             except Exception as e:
-                log(f'Failed to send query -> {e}', 'e')
+                notify(f'Failed to send query -> {e}', 'e')
+        return True if not e else False
     
     while not disconnected:
-        buff_countdown = 0
-        pause(resuply)
-        countdown = (BUFF_LENGTH * 60)
+        menu.countdown = 0
+        pauser.pause(func=resuply)
+        countdown = (CONFIG.buff_length * 60)
         for seconds in range(countdown):
-            buff_countdown = (countdown - seconds)
-            while fish_paused:
-                sleep(1)
+            menu.countdown = (countdown - seconds)
+            while pauser.paused: 
+                sleep(1) #halts while paused
             sleep(1)
 
 
-def log(message : any, type: str = 'normal') -> None:
-    global log_message
+def notify(message : any, type: str = 'normal') -> None:
+    '''Change the value of menu.notification (alert message on the top) and calls debug function'''
     msg = sub(r'\n\r', '', str(message))
     if type == 'normal':
-        log_message = f'[*] {msg}'
+        menu.notify(f'[*] {msg}')
     elif type == 'notice':
-        log_message = f'[!] {msg}'
+        menu.notify(f'[!] {msg}')
     else:
-        log_message = f'[E] {msg}'
-    debug(message)
+        menu.notify(f'[E] {msg}')
+    debugger.debug(message, 'Log')
 
-def resize(message : str, max_width: int, delimiter: str = '...') -> str:
-    '''Resize any string to a fixed length
-    
-    message : str
-        raw string to be resized
-    max_width : int
-        maximum allowed length
-    delimiter : str = '...'
-        arbitrary string to indicate continuity
-    '''
-    if len(message) > max_width:
-        return f'{message[:max_width - len(delimiter)]}{delimiter}'
-    return message
-
-def buffstatus(param: bool) -> str:
-    if param: return 'ON'
-    else: return 'OFF'
-
-def debug(event: any, caller: object = None) -> None:
-    if DEBUG: print(f'\n\n{event}\n\n')
-
-def pause(func: object = None, fparam: any = None, resumefunc: object = None, rparam: any = None) -> None:
-    global fish_paused
-    if func:
-        #Pause between some function
-        log(f'Autofish paused. Calling function: {func}')
-        fish_paused = True
-        func(fparam)
-        log(f'Autofish resumed. Call endend.')
-        fish_paused = False
-    else:
-        if fish_paused:
-            #Resume
-            if resumefunc:
-                resumefunc(rparam)
-            fish_paused = False
-            log(f'Autofish resumed.')
-        else:
-            #Pause
-            fish_paused = True
-            log(f'Autofish paused.')
-
-def cooldown(cd: float) -> None:
-    global in_cooldown, streak
-    in_cooldown = True
-    streak += 1
-    sleep(cd)
-    in_cooldown = False
 
 def isTargetMessage(e: dict) -> bool:
-    if e['channel_id'] == CHANNEL_ID:
+    if e['channel_id'] == CONFIG.channel_id:
         if e['author']['id'] == BOT_UID:
             return True
     return False
 
 
-#-------------------- MENU --------------------#
-def drawMenu(stdscr):
-    global log_message, streak, buff_countdown
-    
-    #*Init
-    stdscr.nodelay(True)
-    stdscr.erase()
-    stdscr.refresh()
-    
-    #*Variables
-    pressedKey = None
+#---------------------------- MAIN ------------------------------#
 
-    #*Main loop
+def message_dispatcher(session : DiscordWebgate) -> None:
+    global captcha
+    
+    def timeout(x : int = 5):
+        '''Maximum timeout between captcha events like "verify" and "regen".''' 
+        sleep(x)
+    
     while True:
-        stdscr.erase()
-        
-        #*Config and general status update
-        app_info = [
-            {'title': 'CONFIG STATUS ', 'content': ' '},
-            {'title': 'AUTOBUFF:     ', 'content': buffstatus(AUTO_BUFF)},
-            {'title': 'DURATION:     ', 'content': f'{BUFF_LENGTH}'},
-            {'title': 'BAIT:         ', 'content': f'{BAIT.upper()}'},
-            {'title': 'STREAK:       ', 'content': f'{streak}'},
-            {'title': 'BYPASSES:     ', 'content': f'{bypasses}'},
-            {'title': 'RESUPLY IN:   ', 'content': f'{buff_countdown}'},
-            {'title': 'COOLDOWN:     ', 'content': f'{cooldown_lifetime}'}
-        ]
-        
-        #*Profile information
-        inventory = profile.inventory
-        stats = profile.stats
-        
-        
-        #*Pressed keys
-        if pressedKey == ord('p'):
-            pause(resumefunc=session.sendQuery, rparam='%f')
-        elif pressedKey == ord('u'):
-            pause(profile.update, session)
-        elif pressedKey == ord('H'):
-            log('Help page pressed - not implemented yet.', 'notice')
-        elif pressedKey == ord('Q'):
-            break
-        elif pressedKey == ord('M'):
-            log('Manual mode pressed - not implemented yet.', 'notice')
-            
-            
-        try:
-            #*Calculations
-            height, width = stdscr.getmaxyx()
-            column = width - round((75 * width) / 100)
-            row = round((30 * height) / 100)
-            m_height, m_width, m_column = (height // 2), (width // 2), (column // 2)
-
-            #Check screen size
-            if width < 112 or height < 37:
-                size_inf = ['[MENU]', 'Mininum size: 112 x 37', f'Current: {width} x {height}']
-                for k, line in enumerate(size_inf):
-                    stdscr.addstr(m_height + k - 1, m_width - (len(line) // 2), line)
+        s = time()
+        if captcha.detected:
+            #print(f'detectad: {captcha.answer_list=} | {len(captcha.answer_list)=} | {captcha.regens=} | {captcha.solving=} ')
+            while captcha.solving: sleep(1)
+            if len(captcha.answer_list) > 0:
+                #print('in')
+                answer = captcha.answer_list.pop(0)
+                session.send_query(f'%verify {answer}')
+                
+                timeout()
             else:
-                #------------------------ TEXT --------------------------#
-                
-                #*Render Last notification
-                stdscr.addstr(0, 1, resize(log_message, width))
-                
-                #*Render Ascii art
-                splitedAscii = MENUART.splitlines()
-                ascii_pos_middle = (m_width - 1) - (max(len(x) for x in splitedAscii) // 2)
-                for k, line in enumerate(splitedAscii):
-                    stdscr.addstr(k + 2, ascii_pos_middle, line)
-
-                #*Render keybinds information panel
-                for k, line in enumerate(KEYBINDS):
-                    _content = f'{line["key"]}-{line["description"]}'
-                    _content_pos_w = ((width - column) + m_column) - (len(_content) // 2)
-                    _content_pos_h = k + 3
-                    if line == KEYBINDS[0]:
-                        _content_pos_h = k + 2
-                    stdscr.addstr(_content_pos_h, _content_pos_w, _content)
+                print('do regen')
+                if captcha.regens <= MAX_ATTEMPTS: #and not captcha.solving:
+                    #print(f'm {captcha.regens}')
+                    captcha.regens += 1
+                    notify(f'Results failed. Re-generating captcha. {captcha.regens}/{MAX_ATTEMPTS}')
+                    captcha.detected = False
+                    session.send_query(f'%verify regen')
                     
-                #*Render app information
-                for k, line in enumerate(app_info):
-                    _content = f'{line["title"]}{line["content"]}'
-                    _content_pos_w = ((width - column)) #-(len(_content) // 2)
-                    _content_pos_h = (height - row) + k + 2 
-                    if line == app_info[0]:
-                        _content_pos_w = ((width - column) + m_column) - (len(_content) // 2)
-                        _content_pos_h = (height - row) + k + 1
-                    stdscr.addstr(_content_pos_h, _content_pos_w, _content)
-                    
-                #*Render inventory
-                for k, line in enumerate(inventory):
-                    _content = f'{line["title"]}{line["content"]}'
-                    _content_pos_w = m_width - column
-                    _content_pos_h = (height - row) + k + 2
-                    if line == inventory[0]:
-                        _content_pos_w = m_width - (len(_content) // 2)
-                        _content_pos_h = (height - row) + k + 1
-                    stdscr.addstr(_content_pos_h, _content_pos_w, _content)
-                    
-                #*Render player stats
-                for k, line in enumerate(stats):
-                    _content = f'{line["title"]}{line["content"]}'
-                    _content_pos_w = 0
-                    _content_pos_h = (height - row) + k + 2
-                    if line == stats[0]:
-                        _content_pos_h = (height - row) + k + 1
-                        _content_pos_w = m_column - (len(_content) // 2) - 2 
-                    stdscr.addstr(_content_pos_h, _content_pos_w, _content)
-                
-                #*Render middle ascii art
-                for k, line in enumerate(MENUART2):
-                    _content = f'{line}'
-                    _content_pos_w = m_width - (len(_content) // 2) - 2 
-                    _content_pos_h = round(m_height * 0.45) + k
-                    stdscr.addstr(_content_pos_h, _content_pos_w, f'{_content}')
-
-                #*Render middle information
-                if len(message.items_list) > 1:
-                    for k, line in enumerate(message.items_list):
-                        _content = f'{line}'
-                        _content_pos_w = m_width - len(_content) // 2
-                        _content_pos_h = (m_height - (len(message.items_list) // 2)) + k
-                        if _content != '': 
-                            stdscr.addstr(_content_pos_h, _content_pos_w, f'{_content}')
-                
-                #------------------------ LINES --------------------------#
-                
-                #*Left
-                stdscr.vline(1, column - 2, curses.ACS_VLINE, height)
-                #*Right
-                stdscr.vline(1, (width - column) - 2, curses.ACS_VLINE, height)
-                #*Top
-                stdscr.hline(1, 0, curses.ACS_HLINE, width)
-                #*Logo bottom frame -> perfectly align with pair number of columns
-                stdscr.hline(len(splitedAscii) + 3, column - 1, curses.ACS_HLINE, (column * 2) - 1)
-                #*Bottom
-                stdscr.hline((height - row), 0, curses.ACS_HLINE, width)
-            
-
-            #*Refresh screen
-            sleep(0.3)
-            stdscr.refresh()
-            pressedKey = stdscr.getch()
-            
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            exit(f'[E] Something went wrong -> {e}') 
-
-
-
-
-#------------------------ MAIN --------------------------#
-def main():
-    global session, streak, bypasses, disconnected, message, cooldown_lifetime, profile, captcha
-    atp = 0
-    while True:
-        cooldown_lifetime = round(uniform(USER_COOLDOWN, (USER_COOLDOWN + MARGIN)), 3)
-        
-        if not fish_paused and not in_cooldown and not captcha.detected:
-            try:
-                session.sendQuery(QUERYS[0]['PAYLOAD'][randint(0, 1)])
-            except Exception as e:
-                exit(f'\n[E] Fish query couldn\'t be sent -> {e}')
-        
-        if captcha.detected and atp <= 3:
-            try:
-                if captcha.answerList != []:
-                    answer = captcha.answerList.pop(0)
-                    session.sendQuery(f'%verify {answer}')
+                    timeout()
                 else:
-                    atp += 1
-                    session.sendQuery('%verify regen')
-                    captcha.reset()
-            except Exception as e:
-                #Failed to send message
-                log(f'Manual captcha is required. -> {e}', 'e')
-        
+                    #print('do halt')
+                    notify(f'Maximun re-gen attempts reached. Manual captcha required !', 'notice')
+                    while captcha.detected: sleep(1) #halts until solved
+        else:
+            if not pauser.paused and not captcha.detected:
+                try: 
+                    session.send_query(QUERYS[0]['PAYLOAD'][randint(0, 1)])
+                    #this does the cooldown time and updates the menu -> the round() does not change the sleep time.
+                    _cd = cd.new()               
+                    menu.cooldown = f'~{round(_cd, 6)}'
+                    diff = (time() - s)
+                    try: sleep(_cd - diff) #takes value and disconts the "poison" coming form the processing/request time.
+                    except Exception as e: pass
+                    if CONFIG.debug:
+                        print(diff)
+                except Exception as e:
+                    debugger.debug(e, 'Exception')
+                    menu.kill()
+            else: sleep(0.5)
+
+
+def message_listener(session : DiscordWebgate) -> None:
+    global message, profile, captcha, disconnected
+    while True:
         while True:
-            try: response = session.recieveEvent()
+            try: 
+                response = session.recieve_event()
             except websocket.WebSocketConnectionClosedException as e:
-                log(f'Connection lost -> {e}. Attempting to reconnect', 'e')
-                session.connect()
+                if menu.is_alive:
+                    notify(f'Connection lost -> {e} Probable cause: incorrect token.', 'e')
             except Exception as e:
+                debugger.debug(e, 'Exception')
                 exit(f'[E] Something went wrong -> {e}')
-            if response['t'] in ['MESSAGE_CREATE', 'MESSAGE_UPDATE']:
-                event = response['d']
 
-                #try:
-                if isTargetMessage(event):
-                    message = Message(event)
+            try: #Message handling
+                if response and response['t'] in ['MESSAGE_CREATE', 'MESSAGE_UPDATE']:
+                    event = response['d']
+                    if isTargetMessage(event):
+                        message = Message(event)
 
-                    #*Captcha detection
-                    if captcha.detected:
-                        if message.content == 'You may now continue.':
-                            log('Captcha bypassed successfully !')
-                            atp = 0
-                            bypasses += 1
-                            captcha.reset()
-                        break
-                    else:
-                        captcha = Captcha()
-                        if captcha.detect(event):
-                            captcha.solve()
+                        #Captcha detection
+                        if captcha.detected:
+                            if message.content == 'You may now continue.':
+                                notify('Captcha bypassed successfully !')
+                                menu.bypasses += 1
+                                captcha.reset()
                             break
                         else:
-                            if message.title:
-                                #Profile update
-                                if message.title.find('Statistics for') > -1:
-                                    profile.rebuildLists(event, 'stats')
-                                    log(f'Stats information updated.')
-                                    pass
-                                if message.title.find('Inventory of') > -1:
-                                    profile.rebuildLists(event, 'inv')
-                                    log('Profile information updated.')
-                                    pass
-                                
-                                #Normal messages
-                                if message.title == 'You caught:':
-                                    message.buildList()
-                                    break
-                                else:
-                                    #Unhandled
-                                    debug(event)
-                                    pass
+                            captcha = Captcha()
+                            if captcha.detect(event):
+                                captcha.solve()
+                                break
                             else:
-                                #Untitled
-                                log(message.items_list[0])
-                                pass
-        cooldown(cooldown_lifetime)
+                                if message.title:
+                                    #Normal messages
+                                    if message.title == 'You caught:':
+                                        #menu.d = f'S:{cd.calc_sigma(cd.values)}'
+                                        message.buildList()
+                                        menu.setmessage(message.items_list)
+                                        menu.streak += 1
+                                        break
+                                    #Profile update
+                                    elif message.title.find('Statistics for') > -1:
+                                        profile.rebuild_lists(event, 'stats')
+                                        menu.setstats(profile.stats)
+                                        notify(f'Stats information updated.')
+                                        break
+                                    #Stats update
+                                    elif message.title.find('Inventory of') > -1:
+                                        profile.rebuild_lists(event, 'inv')
+                                        menu.setinventory(profile.inventory)
+                                        notify('Profile information updated.')
+                                        break
+                                    else:
+                                        #Unhandled
+                                        notify(message.title)
+                                else:
+                                    #Untitled
+                                    notify(message.items_list[0])
+                                    if message.items_list[0].find('You must wait') > -1:
+                                        notify(f'If automatic, this short cooldown is intentional to ensure non-bot behavior.', 'notice')
+                                    break
+                    else: 
+                        pass
+                else: 
+                    pass
+            except Exception as e:
+                debugger.debug(e, 'Exception')
+                menu.kill()
+
 
 #------------------------ INIT --------------------------#
 if __name__ == "__main__":
-    if configLoader():
-        
-        #*Start Session
-        print(f'\n[*] Starting...')
-        session = discordWebgate()
-        message = Message()
-        profile = Profile()
-        captcha = Captcha()
-        
-        #*Start background main routine
-        bgMain = Thread(target=main, daemon=True)
-        bgMain.start()
-        
-        #*Start background rebuff routine
-        disconnected = False
-        bgSync = Thread(target=autoBuff, daemon=True)
-        bgSync.start()
-        
-        #*Draw menu
-        curses.wrapper(drawMenu)
-        session.disconnect()
-        exit(f'\n[!] User exited.')
+    #Start Session
+    print(f'\n[*] Starting...')
+    session.connect()
+    message = Message()
+    profile = Profile()
+    captcha = Captcha()
+    
+    #Main (Listener) - Threaded
+    listener = Thread(target=message_listener, args=(session, ), daemon=True)
+    #Main (Sender) - Threaded
+    dispatcher = Thread(target=message_dispatcher, args=(session, ), daemon=True)
+    #Secondary (Autobuff - sender) - Threaded
+    autobuffer = Thread(target=autoBuff, args=(session, ), daemon=True)
+    
+    #Async Flow
+    listener.start()
+    autobuffer.start()
+    dispatcher.start()
+    
+    #Menu
+    menu.configure(CONFIG.bait, CONFIG.auto_buff, CONFIG.buff_length, profile)
+    menu.__call_run__(mode=CONFIG.compact_mode)
+    #menu.__call_run__(mode='custom', func=menu.custom) #custom call example
+    
+    session.disconnect()
+    
+    #End
+    if CONFIG.debug:
+        try: cd.evaluate()
+        except Exception: pass
+    exit(f'\n[!] User exited.')
