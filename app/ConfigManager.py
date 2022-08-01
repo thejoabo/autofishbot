@@ -84,7 +84,7 @@ class ConfigManager:
         else:
             self.generateConfig()
     
-    def between(self, value: float, min: float|int, max: float|int) -> bool:
+    def between(self, value: float, min: float, max: float) -> bool:
         '''Check if given value is between two numbers'''
         if min <= value and value <= max: 
             return True 
