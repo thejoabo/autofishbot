@@ -1,4 +1,5 @@
 # Virtual Fisher : Autofish Bot
+## [OUTDATED](https://github.com/thejoabo/virtualfisher-bot/issues/29)
 
 Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com/) Discord bot.
 
