@@ -67,7 +67,7 @@ class Captcha:
         self.detecting = True
         self.event = event
         #Costs more memory but is safer
-        for target in ['captcha', '%verify']:
+        for target in ['captcha', 'verify']:
             if str(event).find(target) > -1:
                 #Captcha detected
                 self.detected = True
@@ -335,7 +335,7 @@ def autoBuff(session: DiscordWrapper, queries: list = []) -> None:
     #Profile
     queries.append(('profile', None))
     #Stats
-    queries.append(('stats', None))
+    #queries.append(('stats', None))
     
     #Autobuff
     if CONFIG.auto_buff:
@@ -471,18 +471,23 @@ def message_listener(session : DiscordWrapper) -> None:
             if response['op'] == 0:
                 #Information about profile and guilds (ready state)
                 if response['t'] == 'READY':
-                    guild = None
+                    selected_guild = None
                     event = response['d']
-                    
+
                     #Guild Structure
                     for guild in event['guilds']:
                         for channel in guild['channels']:
-                            if channel['id'] == CONFIG.channel_id:
-                                guild = guild['id']
+                            if str(channel['id']) == CONFIG.channel_id:
+                                try:
+                                    selected_guild = str(int(guild['id']))
+                                except Exception as e:
+                                    debugger.debug(e, 'Exception - Guild Id')
+                                    menu.kill()
                                 break
-                    if guild:
-                        session.setpointers(guild_id = guild)
-                        menu.notify(f'Done. Guild Id: {guild}')
+                    
+                    if selected_guild:
+                        session.setpointers(guild_id = selected_guild)
+                        menu.notify(f'Done. Guild Id: {selected_guild}')
                     else:
                         print(f'Your channel id "{CONFIG.channel_id}" is invalid.')
                         menu.kill()
