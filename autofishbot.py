@@ -4,42 +4,38 @@ import requests
 import websocket 
 from re import sub
 from math import ceil
-from random import randint
 from time import sleep, time
 from threading import Thread
 from app.MenuManager import MainMenu
 from app.Util import pauser, debugger
 from app.CooldownManager import Cooldown
 from app.ConfigManager import ConfigManager
-from app.DiscordWebgate import DiscordWebgate
+from app.DiscordWrapper import OPCODES, DiscordWrapper
+from app.Message import Message
 
 
 #------------------------ CONSTANTS --------------------------#
 
-VERSION = '1.2.0'
+VERSION = '1.2.1'
 BOT_UID = '574652751745777665'
 MAX_ATTEMPTS = 3
 CONFIG = ConfigManager()
-QUERYS = [
-    {'CODE': 0, 'PAYLOAD': ['%fish', '%f'], 'ACTION': 'Catch some fish.'},
-    {'CODE': 1, 'PAYLOAD': ['%sell all', '%s all'], 'ACTION': 'Sell all the fishes you caught.'},
-    {'CODE': 2, 'PAYLOAD': '%profile', 'ACTION': 'View your inventory.'},
-    {'CODE': 3, 'PAYLOAD': '%daily', 'ACTION': 'Get your daily reward.'},
-    {'CODE': 4, 'PAYLOAD': '%stats', 'ACTION': 'Check your stats.'},
-    {'CODE': 5, 'PAYLOAD': {'default' : '%coinflip', 'options' : ['h', 't']}, 'ACTION': 'Flip a coin to have a chance at doubling your money.'},
-    {'CODE': 6, 'PAYLOAD': {'default' : ['%top', '%servertop'], 'options' : ['xp', 'money', 'fish', 'quests', 'chests', 'net', 'weekly']}, 'ACTION': 'View the global or server leaderboards.'},
-    {'CODE': 7, 'PAYLOAD': ['%verify', '%v'], 'ACTION': 'Verifies captcha result.'}
-]
- 
 
 #------------------------ VARIABLES --------------------------#
 
 #Class variables
-session = DiscordWebgate(CONFIG.user_token, CONFIG.channel_id, auto_connect=False)
-cd = Cooldown(CONFIG.user_cooldown)
 debugger.setactive(CONFIG.debug)
+
 menu = MainMenu(autorun=False)
+
+session = DiscordWrapper(CONFIG.user_token, auto_connect=False)
+session.setpointers(menu=menu, channel_id=CONFIG.channel_id, application_id=BOT_UID)
+
+cd = Cooldown(CONFIG.user_cooldown)
+
 pauser.setmenu(menu)
+
+message = Message()
 
 
 #Switches
@@ -60,6 +56,7 @@ class Captcha:
         #Changeable
         self.solved = False
         self.detected = False
+        self.detecting = False
         self.solving = False
         self.regens = 0
         self.answer_list = []
@@ -67,6 +64,7 @@ class Captcha:
 
 
     def detect(self, event) -> bool:
+        self.detecting = True
         self.event = event
         #Costs more memory but is safer
         for target in ['captcha', '%verify']:
@@ -87,12 +85,14 @@ class Captcha:
                     except KeyError:
                         if item['description'].find('solve the captcha posted above') > -1:
                             debugger.debug(f'{self.detected=} | {self.event=} | Cause: query sent after captcha detection.', 'Captcha')
+                            menu.kill()
                         else:
                             debugger.debug(f'{self.detected=} | {self.event=} | Cause: Unkown type. No image but flagged as target.', 'Captcha')
                         print('\nERR ! Report the log above in: https://github.com/thejoabo/virtualfisher-bot/issues/new')
                         menu.kill()
                 
                 #Image detected in embed
+                self.detecting = False
                 return True
             else:
                 debugger.debug(f'{self.detected=} | {self.event=} | Cause: No embeds but flagged as target', 'Captcha')
@@ -100,6 +100,7 @@ class Captcha:
                 menu.kill()
         else:
             #Not detected
+            self.detecting = False
             return False
         
     def solve(self) -> None:
@@ -108,10 +109,9 @@ class Captcha:
             self.answer_list = []
             
             #Generate captcha values using all engines
-            for engine in [2, 1, 3]:
-                notify(f'Using OCR Engine {engine}')
+            for engine in [2, 1, 3, 5]:
                 if engine in [3, 5]:
-                    notify(f'Using OCR Engine {engine} | This engine may take longer to return.', 'notice')
+                    notify(f'Using OCR Engine {engine} | This engine may take longer to return (up to 20 seconds).', 'notice')
                 else:
                     notify(f'Using OCR Engine {engine}')
                 
@@ -126,8 +126,12 @@ class Captcha:
                 }
                 
                 #Send request to OCR.SPACE
-                r = requests.post(self.ocr_url, data=payload)
-                response = json.loads(r.content.decode())
+                try:
+                    r = requests.post(self.ocr_url, data=payload, timeout=20)
+                    response = json.loads(r.content.decode())
+                except requests.exceptions.ReadTimeout:
+                    notify(f'Engine {engine} took too long to respond (20), skipping.')
+                    continue
 
                 #Filter results which are reasonable
                 if response['OCRExitCode'] == 1:
@@ -156,66 +160,12 @@ class Captcha:
             print('\nERR ! Report the log above in: https://github.com/thejoabo/virtualfisher-bot/issues/new')
             menu.kill()
 
-class Message:
-    def __init__(self, event = []) -> None:
-        self.items_list = []
-        self.title = None
-         
-        if event != []:
-            try: self.content = event['content']
-            except KeyError as e: 
-                debugger.debug(e, 'Exception')
-                self.content = None
-                       
-            for embed in event['embeds']:
-                try:
-                    #Main embed
-                    if embed['title']:
-                        self.title = embed['title']
-                        try: self.description = embed['description']
-                        except KeyError as e: 
-                            self.description = None
-                except KeyError:
-                    self.items_list.append(self.sanatize(embed['description']))
-                except Exception as e:
-                    debugger.debug(e, 'Exception')
-        else:
-            pass
 
-    def sanatize(self, content : any) -> str:
-        content = sub(r':.+?: ', '', str(content))
-        content = sub(r'[\*_`\n<>]', '', content)
-        return content
-    
-    def buildList(self, custom_list: list = []) -> None:
-        _tmp = self.description.split('\n')
-        for line in _tmp:
-            final = ''
-            if line.find('LEVEL UP!') > -1:
-                #Level up information
-                level = sub('[^\d+]', '', sub(r'<.+?> ', '', line))
-                final = f'<< LEVEL UP: {int(level) - 1} -> {level} >>'
-            elif line.find('<:') > -1:
-                #Emotes 
-                final = sub(r'  ', ' ', sub(r'<.+?>', '', line))
-            elif line.find(':') > -1:
-                #Duplicator Emote (and commom emotes)
-                final = sub(r'  ', ' ', sub(r':.+?: ', '', line))
-            elif line.find('#') > -1: 
-                #Global boost information
-                pass
-            elif line == '' or line == None or line == '\n':
-                pass
-            else:
-                final = line
-            self.items_list.append(sub('[\*+]', '', final))
-        if custom_list != []:
-            self.items_list = custom_list + self.items_list
-        return None
+
 
 class Profile:
     def __init__(self, event = []) -> None:
-        self.queries = ['%inv', '%stats'] #top...
+        self.queries = ['profile', 'stats']
         self.balance = None
         self.level = None
         self.rod = None
@@ -229,9 +179,9 @@ class Profile:
         self.trips = None
         self.daily = None
 
-    def update(self, session : DiscordWebgate = session) -> None:
+    def update(self, session : DiscordWrapper = session) -> None:
         for query in self.queries:
-            session.send_query(query)
+            session.request(command=query)
             sleep(2)
         return None
 
@@ -292,7 +242,7 @@ class Profile:
                         elif line.find('Balance:') > -1:
                             #Balance
                             self.balance = sub('[^\d+]', '', line)
-                            if len(self.balance) > 10:
+                            if len(self.balance) > 15:
                                 self.balance = '$ {:.3e}'.format(int(self.balance))
                             else:
                                 self.balance = '$ {:,.2f}'.format(int(self.balance))
@@ -343,42 +293,19 @@ class Profile:
 
 #------------------------ AUX FUNCTIONS ------------------------#
 
-def autoBuff(session : DiscordWebgate, _queries = ['%s all', '%inv', '%stats']):
-    global disconnected, captcha
-    
-    #More fish and more treasure
-    if CONFIG.auto_buff:
-        _queries = _queries + [f'%buy fish{CONFIG.buff_length}m', f'%buy treasure{CONFIG.buff_length}m']
 
-    #Bait resuply
-    if CONFIG.bait:
-        _amount = (( (CONFIG.buff_length  * 60) / CONFIG.user_cooldown) - 10) * 0.75 
-        _queries.append(f'%buy {CONFIG.bait} {ceil(_amount)}')
-
-    def resuply(e = None) -> None:
-        for _query in _queries:
-            try:
-                while captcha.detected: 
-                    sleep(1) #waits until solved
-                session.send_query(_query)
-                sleep(2)
-            except Exception as e:
-                notify(f'Failed to send query -> {e}', 'e')
-        return True if not e else False
-    
-    while not disconnected:
-        menu.countdown = 0
-        pauser.pause(func=resuply)
-        countdown = (CONFIG.buff_length * 60)
-        for seconds in range(countdown):
-            menu.countdown = (countdown - seconds)
-            while pauser.paused: 
-                sleep(1) #halts while paused
-            sleep(1)
+def make_command(cmd: str, name: str, value: str, type: int = 3) -> tuple:
+    '''Builds a tuple containing the command (str) and the 'options' parameter (dict).'''
+    parameters = {
+        "type": type,
+        "name": name,
+        "value": value
+    }
+    return (cmd, parameters)
 
 
-def notify(message : any, type: str = 'normal') -> None:
-    '''Change the value of menu.notification (alert message on the top) and calls debug function'''
+def notify(message : str, type: str = 'normal') -> None:
+    '''Changes the value of menu.notification (alert message on the top) and calls debug function'''
     msg = sub(r'\n\r', '', str(message))
     if type == 'normal':
         menu.notify(f'[*] {msg}')
@@ -389,16 +316,69 @@ def notify(message : any, type: str = 'normal') -> None:
     debugger.debug(message, 'Log')
 
 
-def isTargetMessage(e: dict) -> bool:
-    if e['channel_id'] == CONFIG.channel_id:
-        if e['author']['id'] == BOT_UID:
+def check_recipients(event: dict) -> bool:
+    '''Checks if incoming message is sent by the application and targeted to the given channel'''
+    if event['channel_id'] == CONFIG.channel_id:
+        if event['author']['id'] == BOT_UID:
             return True
     return False
 
 
 #---------------------------- MAIN ------------------------------#
 
-def message_dispatcher(session : DiscordWebgate) -> None:
+
+def autoBuff(session: DiscordWrapper, queries: list = []) -> None:
+    global disconnected, captcha
+
+    #Sell fishes
+    queries.append(make_command('sell', 'amount', 'all'))
+    #Profile
+    queries.append(('profile', None))
+    #Stats
+    queries.append(('stats', None))
+    
+    #Autobuff
+    if CONFIG.auto_buff:
+        #More fish buff
+        queries.append(make_command('buy', 'item', f'fish{CONFIG.buff_length}m'))
+        #More treasures buff
+        queries.append(make_command('buy', 'item', f'treasure{CONFIG.buff_length}m'))
+        
+    #Baits
+    if CONFIG.bait:
+        amount = (((CONFIG.buff_length * 60) / CONFIG.user_cooldown) - 10) * 0.5
+        #Purchase baits
+        queries.append(make_command('buy', 'item', f'{CONFIG.bait} {ceil(amount)}'))
+        
+    def resupply(e = None) -> None:
+        for query in queries:
+            while captcha.detecting or not session.commands:
+                sleep(0.5)
+            while captcha.detected or captcha.solving: 
+                sleep(3) 
+            try:
+                session.request(command=query[0], options=query[1])
+                sleep(2)
+            except Exception as e:
+                notify(f'Failed to send query -> {e}', 'e')
+        return None
+    
+    while not disconnected:
+        menu.countdown = 0
+        pauser.pause(func=resupply)
+        countdown = (CONFIG.buff_length * 60)
+        
+        #Timer
+        for seconds in range(countdown):
+            menu.countdown = (countdown - seconds)
+            while pauser.paused: 
+                sleep(1) #halts while paused
+            sleep(1)
+
+
+
+
+def message_dispatcher(session : DiscordWrapper) -> None:
     global captcha
     
     def timeout(x : int = 5):
@@ -408,114 +388,186 @@ def message_dispatcher(session : DiscordWebgate) -> None:
     while True:
         s = time()
         if captcha.detected:
-            #print(f'detectad: {captcha.answer_list=} | {len(captcha.answer_list)=} | {captcha.regens=} | {captcha.solving=} ')
-            while captcha.solving: sleep(1)
+            while captcha.solving: 
+                sleep(1)
+            
             if len(captcha.answer_list) > 0:
-                #print('in')
                 answer = captcha.answer_list.pop(0)
-                session.send_query(f'%verify {answer}')
+                
+                cmd = make_command('verify', 'answer', answer)
+                session.request(command=cmd[0], options=cmd[1])
                 
                 timeout()
             else:
-                print('do regen')
-                if captcha.regens <= MAX_ATTEMPTS: #and not captcha.solving:
-                    #print(f'm {captcha.regens}')
+                if captcha.regens <= MAX_ATTEMPTS: 
                     captcha.regens += 1
-                    notify(f'Results failed. Re-generating captcha. {captcha.regens}/{MAX_ATTEMPTS}')
                     captcha.detected = False
-                    session.send_query(f'%verify regen')
+                    
+                    notify(f'Results failed. Re-generating captcha ({captcha.regens}/{MAX_ATTEMPTS}).')
+                    
+                    cmd = make_command('verify', 'answer', 'regen')
+                    session.request(command=cmd[0], options=cmd[1])
                     
                     timeout()
                 else:
-                    #print('do halt')
                     notify(f'Maximun re-gen attempts reached. Manual captcha required !', 'notice')
-                    while captcha.detected: sleep(1) #halts until solved
+                    while captcha.detected: 
+                        sleep(1)
         else:
+            while captcha.detecting:
+                sleep(0.1)
             if not pauser.paused and not captcha.detected:
                 try: 
-                    session.send_query(QUERYS[0]['PAYLOAD'][randint(0, 1)])
-                    #this does the cooldown time and updates the menu -> the round() does not change the sleep time.
-                    _cd = cd.new()               
-                    menu.cooldown = f'~{round(_cd, 6)}'
+                    if message.id and message.play_id:
+                        if session.request(message_id=message.id, custom_id=message.play_id):
+                            pass
+                        else:
+                            #Somthing went wrong, but able to continue
+                            message.id = None
+                            message.play_id = None
+                    else:
+                        if not session.guild_id:
+                            continue
+                        else:
+                            session.request(command='fish')
+                    _cd = cd.new()
+                    menu.cooldown = f'~{round(_cd, 4)}'
                     diff = (time() - s)
-                    try: sleep(_cd - diff) #takes value and disconts the "poison" coming form the processing/request time.
-                    except Exception as e: pass
-                    if CONFIG.debug:
-                        print(diff)
+                    try: 
+                        sleep(_cd - diff) #takes value and disconts the "poison" coming form the processing/request time.
+                    except Exception as e: 
+                        debugger.debug(e, 'Exception - Cooldown')
+                        pass
                 except Exception as e:
                     debugger.debug(e, 'Exception')
                     menu.kill()
-            else: sleep(0.5)
+            else: 
+                sleep(0.5)
 
 
-def message_listener(session : DiscordWebgate) -> None:
-    global message, profile, captcha, disconnected
+
+
+def message_listener(session : DiscordWrapper) -> None:
+    global profile, captcha, disconnected
+    #while True:
     while True:
-        while True:
-            try: 
-                response = session.recieve_event()
-            except websocket.WebSocketConnectionClosedException as e:
-                if menu.is_alive:
-                    notify(f'Connection lost -> {e} Probable cause: incorrect token.', 'e')
-            except Exception as e:
-                debugger.debug(e, 'Exception')
-                exit(f'[E] Something went wrong -> {e}')
+        try: 
+            response = session.receive_event()
+        except websocket.WebSocketConnectionClosedException as e:
+            if menu.is_alive and menu.streak > 1:
+                notify(f'Connection lost. Attempting to reconnect.', 'e')
+                if session.connect(reconnect=True):
+                    break
+                else:
+                    menu.kill()
+        except Exception as e:
+            debugger.debug(e, 'Exception')
+            menu.kill()
 
-            try: #Message handling
-                if response and response['t'] in ['MESSAGE_CREATE', 'MESSAGE_UPDATE']:
+        if response:
+            #Set sequence for possible reconnect
+            session.seq = response['s']
+
+            if response['op'] == 0:
+                #Information about profile and guilds (ready state)
+                if response['t'] == 'READY':
+                    guild = None
                     event = response['d']
-                    if isTargetMessage(event):
-                        message = Message(event)
+                    
+                    #Guild Structure
+                    for guild in event['guilds']:
+                        for channel in guild['channels']:
+                            if channel['id'] == CONFIG.channel_id:
+                                guild = guild['id']
+                                break
+                    if guild:
+                        session.setpointers(guild_id = guild)
+                        menu.notify(f'Done. Guild Id: {guild}')
+                    else:
+                        print(f'Your channel id "{CONFIG.channel_id}" is invalid.')
+                        menu.kill()
+                        break
 
+                    #Get command list from the channel
+                    if session.get_commands():
+                        #All ok
+                        continue
+                    else:
+                        print(f'Failed to load commands. Aborting.')
+                        menu.kill()
+                        break
+                
+                #Messages
+                elif response['t'] in ['MESSAGE_CREATE', 'MESSAGE_UPDATE']:
+                    event = response['d']
+                    if check_recipients(event):
+                        message.make(event)
+                        
                         #Captcha detection
                         if captcha.detected:
                             if message.content == 'You may now continue.':
                                 notify('Captcha bypassed successfully !')
                                 menu.bypasses += 1
                                 captcha.reset()
-                            break
+                            #break
                         else:
                             captcha = Captcha()
                             if captcha.detect(event):
                                 captcha.solve()
-                                break
+                                #break
                             else:
                                 if message.title:
                                     #Normal messages
                                     if message.title == 'You caught:':
-                                        #menu.d = f'S:{cd.calc_sigma(cd.values)}'
-                                        message.buildList()
-                                        menu.setmessage(message.items_list)
+                                        message.build()
+                                        menu.setmessage(message.items)
                                         menu.streak += 1
-                                        break
                                     #Profile update
                                     elif message.title.find('Statistics for') > -1:
                                         profile.rebuild_lists(event, 'stats')
                                         menu.setstats(profile.stats)
-                                        notify(f'Stats information updated.')
-                                        break
+                                        menu.notify(f'Stats information updated.')
                                     #Stats update
                                     elif message.title.find('Inventory of') > -1:
                                         profile.rebuild_lists(event, 'inv')
                                         menu.setinventory(profile.inventory)
-                                        notify('Profile information updated.')
-                                        break
+                                        menu.notify('Profile information updated.')
                                     else:
-                                        #Unhandled
-                                        notify(message.title)
+                                        #Unhandled (but titled)
+                                        menu.notify(f'{message.title}.')
                                 else:
                                     #Untitled
-                                    notify(message.items_list[0])
-                                    if message.items_list[0].find('You must wait') > -1:
-                                        notify(f'If automatic, this short cooldown is intentional to ensure non-bot behavior.', 'notice')
-                                    break
-                    else: 
+                                    if message.content:
+                                        if message.content.find('You must wait') > -1:
+                                            menu.notify(f'[!] If automatic, this short cooldown is intentional to ensure non-bot behavior.')
+                                        else:
+                                            menu.notify(f'{message.sanatize(message.content)}')
+                                    else:
+                                        menu.notify(f'{message.sanatize(message.d)}')
+                    else:
+                        #Not addressed to user
                         pass
-                else: 
+                elif response['t'] not in ['INTERACTION_CREATE', 'INTERACTION_SUCCESS', 'MESSAGE_REACTION_ADD']:
+                    #Unhandled gateway events
+                    if CONFIG.debug:
+                        menu.notify(f'Gateway event: {response["t"]}.')
+                        #print(response) #for development reasons only
                     pass
-            except Exception as e:
-                debugger.debug(e, 'Exception')
-                menu.kill()
+                else:
+                    #Harmless gateway events
+                    pass
+            else:
+                #Unhandled op codes
+                if CONFIG.debug:
+                    for op in OPCODES:
+                        if op == response['op']:
+                            notify(f'RCV: {op["name"]} -> {op["description"]}', 'notice')
+                            break
+                else:
+                    pass
+        else:
+            #No event
+            pass
 
 
 #------------------------ INIT --------------------------#
@@ -523,7 +575,6 @@ if __name__ == "__main__":
     #Start Session
     print(f'\n[*] Starting...')
     session.connect()
-    message = Message()
     profile = Profile()
     captcha = Captcha()
     
@@ -543,11 +594,21 @@ if __name__ == "__main__":
     menu.configure(CONFIG.bait, CONFIG.auto_buff, CONFIG.buff_length, profile)
     menu.__call_run__(mode=CONFIG.compact_mode)
     #menu.__call_run__(mode='custom', func=menu.custom) #custom call example
+
+    pauser.pause(func=sleep, args=(1.5,))
     
+    #Fish on exit
+    if CONFIG.fish_on_exit:
+        if not captcha.detected and menu.streak > 1:
+            cmd = make_command('buy', 'item', 'auto30m')
+            if session.request(command=cmd[0], options=cmd[1]):
+                print(f'[!] You hired a worker for the next 30 minutes. The fish he catches will automatically be added to your inventory.')
+                
     session.disconnect()
     
     #End
     if CONFIG.debug:
         try: cd.evaluate()
         except Exception: pass
+    
     exit(f'\n[!] User exited.')

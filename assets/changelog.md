@@ -1,6 +1,24 @@
 # Changelog
-
-##  v1.2.0 - 7/31/22 (current)
+## v1.2.1 - 9/5/22 (current)
+#### **Added**
+- implemented "fish on exit" (auto30m)
+- autofish using interactions (buttons and slash commands) ([#29](https://github.com/thejoabo/virtualfisher-bot/issues/29))
+- trace to debugger class (and better logs overall)
+#### **Changed**
+- discord's API wrapper
+  -  requests 
+  -  webgate identification
+  -  headers and authorization
+  -  session and nonce (snowflake) functions
+- requests error handling
+- message class (support to interactions and compartmentalization)
+- autobuff function (command list and stalling conditions)
+- dispatcher/receiver functions
+#### **Fixed**
+- OCR's request timeout (25 seconds) for engines 3 and 5
+- config manager (strings are now sanatized)
+- minor source code typos
+##  v1.2.0 - 7/31/22 
 #### **Added**
 - support to multiple configuration files
 - support to third-party (custom) menus - experimental

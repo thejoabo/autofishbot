@@ -7,6 +7,7 @@ Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com
 - CLI UI (Menu)
 - [Captcha Bypass](#captcha-information)
 - Auto Buff (more treasures + more fish)
+- Interactions (buttons and slash commands)
 
 ## Demo
 ![demo](assets/images/demo.gif)
@@ -60,10 +61,13 @@ The metodology is pretty straight forward, when a new captcha is detected:
 If all tests fail, a request to regenerate the captcha will be sent (up to 3 times). If everything goes wrong, the bot will halt util you solve it manually.
 
 Keep in mind that the captcha detection method  is not flawless, unexpected events can cause some unusual behavior that could influence detection accuracy. Therefore, it should not be left alone without monitoring for longer periods of time.
-### Demo
+### Demo (normal)
 ![captcha-demo](assets/images/captcha-demo.gif)
 *(the current step is outputed on the top, 1.5x speed)*
 
+### Demo (with wrong code)
+![captcha-demo-wrong-code](assets/images/captcha-with-wrong-code.gif)
+*(the current step is outputed on the top, 1.5x speed)*
 
 - ### HOW DO I GET MY **FREE** KEY ?
 All you need to do is use [any](https://temp-mail.io/en) email to get it here: https://ocr.space/ocrapi/freekey.
@@ -75,39 +79,25 @@ For now this is the only way. But I'm thinking about the possibility of make an 
 
 
 ## Changelog
-###  v1.2.0 - 7/31/22 (current)
+### v1.2.1 - 9/5/22 (current)
 #### **Added**
-- support to multiple configuration files
-- support to third-party (custom) menus - experimental
-- debugger class (using inspector package)
-- pause/resume class
-- compact mode ([#23](https://github.com/thejoabo/virtualfisher-bot/discussions/23), [#15](https://github.com/thejoabo/virtualfisher-bot/issues/15) )
-- resize function for messages and notifications (to avoid errors when strings > terminal width)
-- FAQ to config parameters
+- implemented "fish on exit" (auto30m)
+- autofish using interactions (buttons and slash commands) ([#29](https://github.com/thejoabo/virtualfisher-bot/issues/29))
+- trace to debugger class (and better log overall)
 #### **Changed**
-- discord webgate (connectivity issues, compartmentalization)
-- cooldown method - normal distribution ([#12](https://github.com/thejoabo/virtualfisher-bot/discussions/12))
-- project overall structue (features can now be compartmentalized, config folder, app folder)
-- config management method (also, new parameters)
-- proper async approach (dispatcher and listener)
-- all menus are now parts of a class (MenuManager)
-- imports (external packages limitation)
-- captcha detection method ([#14](https://github.com/thejoabo/virtualfisher-bot/issues/14))
-- calculations for menu dimensions and proportions
+- discord's API wrapper
+  -  requests 
+  -  webgate identification
+  -  headers and authorization
+  -  session and nonce (snowflake) functions
+- requests error handling
+- message class (support to interactions and compartmentalization)
+- autobuff function (command list and stalling conditions)
+- dispatcher/receiver functions
 #### **Fixed**
-- sanitized normal emotes (@yudhistiraindyka [#22](https://github.com/thejoabo/virtualfisher-bot/pull/22), [#20](https://github.com/thejoabo/virtualfisher-bot/issues/20))
-- multiple embeds handling for profile functions
-- pause function argument handling 
-- autobuff/resupply function queries  
-- captcha regen when all results fail ([#14](https://github.com/thejoabo/virtualfisher-bot/issues/14))
-- captcha timeout limit to check for confirmation messages
-- captcha answer duplicates are now ignored
-- captcha safe-exit methods when abnormal behavior is found
-- config manager class (proper exceptions handling, minor compatibility issues)
-- reduced memory consumption while paused
-- stalling conditions for the dispatcher (while captcha detected or autofish is paused)
-- curses exceptions handling (addwstr() type errors) ([#21](https://github.com/thejoabo/virtualfisher-bot/issues/21))
-  
+- OCR's request timeout (25 seconds) for engines 3 and 5
+- config manager (strings are now sanatized)
+- minor source code typos
 ...
 
 [FULL CHANGELOG HERE](assets/changelog.md)

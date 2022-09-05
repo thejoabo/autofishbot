@@ -1,8 +1,9 @@
 #------------------------ IMPORTS --------------------------#
 from webbrowser import Error as wbError, open as wbOpen
 from configparser import ConfigParser
-from app.Util import debugger
 from os import getcwd, listdir
+from app.Util import debugger
+from re import sub
 
 
 #------------------------ CONSTANTS --------------------------#
@@ -46,31 +47,37 @@ class ConfigManager:
                 cfg.read(f'{self.path}/{selected}')
                 config = cfg['PREFERENCES']
                 #?--------------------   PARAMETERS    --------------------#
-                self.channel_id    = config['CHANNEL_ID']
-                self.user_token    = config['USER_TOKEN']
-                self.ocr_api_key   = config['OCR_API_KEY']
-                self.bait          = config['BAIT']
+                self.channel_id    = str(int(config['CHANNEL_ID']))
+                self.user_token    = self.to_string(config['USER_TOKEN'])
+                self.ocr_api_key   = self.to_string(config['OCR_API_KEY'])
+                self.bait          = self.to_string(config['BAIT'])
                 self.auto_buff     = self.to_bool(config['AUTO_BUFF'])
                 self.buff_length   = self.round_bf(int(config['BUFF_LENGTH']))
-                self.fish_on_exit  = self.to_bool(config['FISH_ON_EXIT']) #not implemented yet
+                self.fish_on_exit  = self.to_bool(config['FISH_ON_EXIT']) 
                 self.debug         = self.to_bool(config['DEBUG'])
                 
                 #COMPACT_MODE
                 _cm = self.to_bool(config['COMPACT_MODE'])
-                if _cm: self.compact_mode = 'compact'
-                else: self.compact_mode = 'full'
+                if _cm: 
+                    self.compact_mode = 'compact'
+                else: 
+                    self.compact_mode = 'full'
                 
                 #NUMBER_FORMATTING - not implemented yet
-                _nf = config['NUMBER_FORMATTING'].lower()
-                if _nf in ['e','scientific']: self.number_formatting = 'e'
-                elif _nf in [None,'default']: self.number_formatting = 'default'
-                else: raise CustomError(f'NUMBER_FORMATTING outside ["e", "default"] -> "{_nf}" given.')
+                _nf = self.to_string(config['NUMBER_FORMATTING']).lower()
+                if _nf in ['e','scientific']: 
+                    self.number_formatting = 'e'
+                elif _nf in [None,'default']: 
+                    self.number_formatting = 'default'
+                else: 
+                    raise CustomError(f'NUMBER_FORMATTING outside ["e", "default"] -> "{_nf}" given.')
                 
                 #USER_COOLDOWN
                 _cd = float(config['USER_COOLDOWN'])
                 if self.between(_cd, self.cdlimits['min'], self.cdlimits['max']):
                     self.user_cooldown = _cd
-                else: raise CustomError(f'USER_COOLDOWN outside {self.cdlimits} -> "{_cd}" given.')
+                else: 
+                    raise CustomError(f'USER_COOLDOWN outside {self.cdlimits} -> "{_cd}" given.')
                 #?---------------------------------------------------------#
                 
                 print(f'[*] Successfully loaded \'{selected}\' config. ')
@@ -90,12 +97,19 @@ class ConfigManager:
             return True 
         return False
 
+    def to_string(self, value: str) -> str:
+        return sub(r'[\'\"]', '', value)
+
     def round_bf(self, value: int, m = 12.5) -> int:
         if value > -1:
-            if self.between(value, self.bflimits['min'], m): return 5
-            elif self.between(value, m, self.bflimits['max']): return 20
-            else: raise CustomError(f'BUFF_LENGTH outside {self.bflimits} -> "{value}" given.')
-        else: raise CustomError(f'BUFF_LENGTH: {value} < 0.')
+            if self.between(value, self.bflimits['min'], m): 
+                return 5
+            elif self.between(value, m, self.bflimits['max']): 
+                return 20
+            else: 
+                raise CustomError(f'BUFF_LENGTH outside {self.bflimits} -> "{value}" given.')
+        else: 
+            raise CustomError(f'BUFF_LENGTH: {value} < 0.')
     
     def to_bool(self, param: str) -> bool:
         '''Convert string to bool'''
@@ -104,14 +118,16 @@ class ConfigManager:
             return True
         elif param in ['0', 'false']: 
             return False
-        else: raise CustomError(f'[E] Expected: true or false, "{param}" given. Check your config file.')
+        else: 
+            raise CustomError(f'[E] Expected: true or false, "{param}" given. Check your config file.')
     
     def errDialog(self, message: str) -> None:
         print(f'{message}')
         try:
             if input(f'[?] Do you want to generate a new config ? (y/n) ').lower() == 'y':
                 self.generateConfig()
-            else: exit(f'[!] User exited.')
+            else: 
+                exit(f'[!] User exited.')
         except KeyboardInterrupt: 
             exit(f'\n[!] User exited.')
         except Exception as e: 
@@ -127,7 +143,8 @@ class ConfigManager:
                 index = int(input(f'[?] Insert the config number: '))
                 if index > 0 and index <= len(self.configs):
                     return self.configs[index - 1]
-                else: raise CustomError(f'Invalid choice. {index} is outside the scope.')
+                else: 
+                    raise CustomError(f'Invalid choice. {index} is outside the scope.')
             except KeyboardInterrupt:
                 exit('\n[!] User exited.')
             except Exception as e:

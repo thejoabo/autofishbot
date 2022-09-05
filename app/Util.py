@@ -1,6 +1,6 @@
 #------------------------ IMPORTS --------------------------# 
 from typing import Callable, Any
-from inspect import stack
+from inspect import stack, trace
 
 #------------------------- CLASSES ---------------------------#
 class Debugger:
@@ -14,10 +14,15 @@ class Debugger:
     
     def debug(self, event : any = None, id : str = 'Unk') -> None:
         #tt -> a = 'log', b (debug) = true -> !a || (b && a)
-        if id != 'Log' or (self.is_active and id == 'Log'):   
-            print(f'''[DEBUG - {id}]\nStack -> {stack()}\nEvent -> {event}\n\n''')
-        
-    
+        if id != 'Log' or (self.is_active and id == 'Log'):
+            print(f'''
+            DEBUG -> {id}\n
+            TRACEBACK -> {trace()}\n
+            EVENT -> {event}\n
+            STACK -> {stack()}\n
+            ''')
+
+
 class PauseControl:
     def __init__(self, starter = True) -> None:
         self.paused = starter
@@ -55,5 +60,4 @@ class PauseControl:
         
 #------------------------- INIT ---------------------------#
 pauser = PauseControl()
-
 debugger = Debugger()

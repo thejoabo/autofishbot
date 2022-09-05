@@ -79,7 +79,6 @@ Even if **AUTO_BUFF** is set to "**FALSE**", this value will be used to define t
 
 
 ## WHAT IS FISH_ON_EXIT ?
-### **Not implemented yet.**
 The **FISH_ON_EXIT** parameter stands for the **boolean** value which enables the functionality to send the "*%buy auto30m*" command when you close the program, thus fishing for 30 minutes while you are offline. *Keep in mind that you must meet the requirements to use the command.*
 
 ## WHAT IS COMPACT_MODE ?

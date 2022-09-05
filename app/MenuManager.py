@@ -22,12 +22,18 @@ C_MENUART = [' ___  ___  ___       _   ',
 MENUART2 = [' ▀▄▀ ▄▀▄ █ █   ▄▀▀ ▄▀▄ █ █ ▄▀  █▄█ ▀█▀',
             '  █  ▀▄▀ ▀▄█   ▀▄▄ █▀█ ▀▄█ ▀▄█ █ █  █ ']
 
+
 KEYBINDS = [{'key': 'KEYBINDS ', 'description': '   INFORMATION   '},
             {'key': '    Q    ', 'description': '   Exit         '},
             {'key': '    p    ', 'description': '   Pause/resume '},
-            {'key': '    u    ', 'description': '   Update info  '},
-            {'key': '    H    ', 'description': '   Help Page    '},
-            {'key': '    M    ', 'description': '   Manual mode  '}]
+            {'key': '    u    ', 'description': '   Update info  '}]
+
+# KEYBINDS = [{'key': 'KEYBINDS ', 'description': '   INFORMATION   '},
+#             {'key': '    Q    ', 'description': '   Exit         '},
+#             {'key': '    p    ', 'description': '   Pause/resume '},
+#             {'key': '    u    ', 'description': '   Update info  '},
+#             {'key': '    H    ', 'description': '   Help Page    '},
+#             {'key': '    M    ', 'description': '   Manual mode  '}]
 
 
 #------------------------- CLASSES ---------------------------#
@@ -84,8 +90,7 @@ class MainMenu:
             self.notification = 'Manual mode pressed - not implemented yet.'
 
     def configure(self, bait: str, autobuff: bool, duration: int, profile : object) -> None:
-        fixbool = (lambda var: 'ON' if var else 'OFF')
-        self.auto_buff = fixbool(autobuff)
+        self.auto_buff = 'ON' if autobuff else 'OFF'
         self.buff_length = duration
         self.bait = bait.upper()
         self.profile = profile
@@ -163,7 +168,7 @@ class MainMenu:
                 {'title': 'BAIT:         ', 'content': f'{self.bait}'        },
                 {'title': 'STREAK:       ', 'content': f'{self.streak}'      },
                 {'title': 'BYPASSES:     ', 'content': f'{self.bypasses}'    },
-                {'title': 'RESUPLY IN:   ', 'content': f'{self.countdown}'   },
+                {'title': 'RESUPPLY IN:  ', 'content': f'{self.countdown}'   },
                 {'title': 'COOLDOWN:     ', 'content': f'{self.cooldown}'    },
                 {'title': ''              , 'content': f'{self.d}'           }]
                 
@@ -293,14 +298,14 @@ class MainMenu:
                 
                 self.app = [
                 {'title': 'CONFIG', 'content': ''},
-                {'title': 'AUTOBUFF:   ', 'content': f'{self.auto_buff}'  },
-                {'title': 'DURATION:   ', 'content': f'{self.buff_length}'},
-                {'title': 'BAIT:       ', 'content': f'{self.bait}'       },
-                {'title': 'STREAK:     ', 'content': f'{self.streak}'     },
-                {'title': 'BYPASSES:   ', 'content': f'{self.bypasses}'   },
-                {'title': 'RESUPLY IN: ', 'content': f'{self.countdown}'  },
-                {'title': 'COOLDOWN:   ', 'content': f'{self.cooldown}'   },
-                {'title': ''            , 'content': f'{self.d}'          }]
+                {'title': 'AUTOBUFF:    ', 'content': f'{self.auto_buff}'  },
+                {'title': 'DURATION:    ', 'content': f'{self.buff_length}'},
+                {'title': 'BAIT:        ', 'content': f'{self.bait}'       },
+                {'title': 'STREAK:      ', 'content': f'{self.streak}'     },
+                {'title': 'BYPASSES:    ', 'content': f'{self.bypasses}'   },
+                {'title': 'RESUPPLY IN: ', 'content': f'{self.countdown}'  },
+                {'title': 'COOLDOWN:    ', 'content': f'{self.cooldown}'   },
+                {'title': ''             , 'content': f'{self.d}'          }]
                 
                 #Calculations
                 calc_compact_dimentions(stdscr)
