@@ -23,6 +23,8 @@ MENUART2 = [' ▀▄▀ ▄▀▄ █ █   ▄▀▀ ▄▀▄ █ █ ▄▀  
             '  █  ▀▄▀ ▀▄█   ▀▄▄ █▀█ ▀▄█ ▀▄█ █ █  █ ']
 
 
+
+
 KEYBINDS = [{'key': 'KEYBINDS ', 'description': '   INFORMATION   '},
             {'key': '    Q    ', 'description': '   Exit         '},
             {'key': '    p    ', 'description': '   Pause/resume '},
@@ -73,7 +75,7 @@ class MainMenu:
         self.is_alive = False
     
     def check_keybinds(self, key) -> None:
-        if   key == ord('p'): 
+        if key == ord('p'): 
             pauser.pause()
         elif key == ord('u'):
             #Pauses while updating profile

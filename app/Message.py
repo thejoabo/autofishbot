@@ -36,13 +36,16 @@ class Message:
                         break
                 except KeyError:
                     self.play_id = None
+                    custom_id = None
                 except Exception as e:
                     debugger.debug(e, 'Messages parsing')
             if custom_id:
                 #Set new ids
                 self.id = event['id']
                 self.play_id = custom_id
-        
+        else:
+            self.id = None
+            self.play_id = None
         
         #Set attributes
         if event != []:

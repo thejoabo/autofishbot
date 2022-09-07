@@ -40,6 +40,7 @@ message = Message()
 
 #Switches
 disconnected = False
+receiver_ready = True
 
 
 #-------------------------- CLASSES --------------------------#
@@ -328,7 +329,7 @@ def check_recipients(event: dict) -> bool:
 
 
 def autoBuff(session: DiscordWrapper, queries: list = []) -> None:
-    global disconnected, captcha
+    global disconnected, captcha, receiver_ready
 
     #Sell fishes
     queries.append(make_command('sell', 'amount', 'all'))
@@ -357,7 +358,8 @@ def autoBuff(session: DiscordWrapper, queries: list = []) -> None:
             while captcha.detected or captcha.solving: 
                 sleep(3) 
             try:
-                session.request(command=query[0], options=query[1])
+                if receiver_ready:
+                    session.request(command=query[0], options=query[1])
                 sleep(2)
             except Exception as e:
                 notify(f'Failed to send query -> {e}', 'e')
@@ -379,7 +381,7 @@ def autoBuff(session: DiscordWrapper, queries: list = []) -> None:
 
 
 def message_dispatcher(session : DiscordWrapper) -> None:
-    global captcha
+    global captcha, receiver_ready
     
     def timeout(x : int = 5):
         '''Maximum timeout between captcha events like "verify" and "regen".''' 
@@ -416,13 +418,13 @@ def message_dispatcher(session : DiscordWrapper) -> None:
         else:
             while captcha.detecting:
                 sleep(0.1)
-            if not pauser.paused and not captcha.detected:
+            if not pauser.paused and not captcha.detected and receiver_ready:
                 try: 
                     if message.id and message.play_id:
                         if session.request(message_id=message.id, custom_id=message.play_id):
                             pass
                         else:
-                            #Somthing went wrong, but able to continue
+                            #Something went wrong, but able to continue
                             message.id = None
                             message.play_id = None
                     else:
@@ -447,22 +449,24 @@ def message_dispatcher(session : DiscordWrapper) -> None:
 
 
 
-def message_listener(session : DiscordWrapper) -> None:
-    global profile, captcha, disconnected
-    #while True:
-    while True:
+def message_receiver(session : DiscordWrapper) -> None:
+    global profile, captcha, disconnected, receiver_ready
+    while True:    
         try: 
             response = session.receive_event()
-        except websocket.WebSocketConnectionClosedException as e:
-            if menu.is_alive and menu.streak > 1:
-                notify(f'Connection lost. Attempting to reconnect.', 'e')
-                if session.connect(reconnect=True):
-                    break
-                else:
-                    menu.kill()
+            receiver_ready = True
+        #except websocket.WebSocketConnectionClosedException as e:
+            # if menu.is_alive and menu.streak > 1:
+            #     notify(f'Connection lost. Attempting to reconnect.', 'e')
+            #     if session.connect(reconnect=True):
+            #         break
+            #     else:
+            #         menu.kill()
         except Exception as e:
-            debugger.debug(e, 'Exception')
+            receiver_ready = False
+            debugger.debug(e, 'Exception - Response')
             menu.kill()
+            break
 
         if response:
             #Set sequence for possible reconnect
@@ -506,7 +510,12 @@ def message_listener(session : DiscordWrapper) -> None:
                 elif response['t'] in ['MESSAGE_CREATE', 'MESSAGE_UPDATE']:
                     event = response['d']
                     if check_recipients(event):
-                        message.make(event)
+                        try:
+                            message.make(event)
+                        except Exception as e:
+                            receiver_ready = False
+                            debugger.debug(e, 'Exception - Message.make()')
+                            menu.kill()
                         
                         #Captcha detection
                         if captcha.detected:
@@ -573,7 +582,7 @@ def message_listener(session : DiscordWrapper) -> None:
         else:
             #No event
             pass
-
+    receiver_ready = False
 
 #------------------------ INIT --------------------------#
 if __name__ == "__main__":
@@ -584,7 +593,7 @@ if __name__ == "__main__":
     captcha = Captcha()
     
     #Main (Listener) - Threaded
-    listener = Thread(target=message_listener, args=(session, ), daemon=True)
+    listener = Thread(target=message_receiver, args=(session, ), daemon=True)
     #Main (Sender) - Threaded
     dispatcher = Thread(target=message_dispatcher, args=(session, ), daemon=True)
     #Secondary (Autobuff - sender) - Threaded

@@ -226,6 +226,7 @@ class DiscordWrapper:
             return False
         
         self.code = r.status_code
+
         if self.code > 204:
             print(f'[E] Request error:\nPayload: {data}\nHeaders: {self.headers}\nUrl: {self.api[type]}')
             for code in HTTP_CODES:
@@ -243,11 +244,26 @@ class DiscordWrapper:
                         if int(response['code']) == 50035:
                             #Invalid Form Body
                             return False
+                        else:
+                            try:
+                                print(f'Response dump: {loads(r.content)}')
+                            except Exception as e:
+                                debugger.debug(e, f'Exception - 400')
+                            finally:
+                                self.menu.kill()
                     else:
                         self.menu.notify(f'[E] RCV: {self.code}({code["name"]}) | Sleeping 60 seconds... ')
+                        debugger.debug(f'code: {self.code}')
                         sleep(60)
-                    break
-            return False
+                        return True
+                    #break
+            try:
+                print(f'[E] Unknown code: {self.code}')
+                print(f'Response dump: {loads(r.content)}')
+            except Exception as e:
+                pass
+            finally:
+                self.menu.kill()
         else:
             #Ok
             return True
@@ -259,44 +275,45 @@ class DiscordWrapper:
     
     
     #--------------------------- Connection ------------------------#
-    def connect(self, reconnect=False) -> bool:
+    #def connect(self, reconnect=False) -> bool:
+    def connect(self) -> bool:
         try:
             self.ws.connect(self.api['gateway'])
             self._heartbeathread = Thread(target=self._send_heartbeat, args=(self._get_interval(),), daemon=True)
             self._heartbeathread.start()
-            if reconnect:
-                if self.reconnect():
-                    self.menu.notify('[!] Session reconnected.')
-                    return True
-                else:
-                    print('[E] Unable to reconnect.')
-                    self.menu.kill()
-                    return False
+            # if reconnect:
+            #     if self.reconnect():
+            #         self.menu.notify('[!] Session reconnected.')
+            #         return True
+            #     else:
+            #         print('[E] Unable to reconnect.')
+            #         self.menu.kill()
+            #         return False
+            # else:
+            if self.webgate_passport():
+                print('[*] Session stablished !')
+                return True
             else:
-                if self.webgate_passport():
-                    print('[*] Session stablished !')
-                    return True
-                else:
-                    exit('\n[E] Something went wrong while connecting.')
+                exit('\n[E] Something went wrong while connecting.')
         except Exception as e:
             debugger.debug(e, 'Exception')
             exit(f'\n[E] Something went wrong while connecting: {e}')
     
-    def reconnect(self) -> None:
-        resume = {
-            'op': 6,
-            'd': {
-                'token': f'{self.auth}',
-                'session_id': f'{self.session}',
-                'seq': f'{self.seq}'
-            }
-        }
-        try:
-            self.ws.send(dumps(resume))
-            return True
-        except Exception as e:
-            debugger(e, 'Exception - Reconnect')
-            return False
+    # def reconnect(self) -> None:
+    #     resume = {
+    #         'op': 6,
+    #         'd': {
+    #             'token': f'{self.auth}',
+    #             'session_id': f'{self.session}',
+    #             'seq': f'{self.seq}'
+    #         }
+    #     }
+    #     try:
+    #         self.ws.send(dumps(resume))
+    #         return True
+    #     except Exception as e:
+    #         debugger(e, 'Exception - Reconnect')
+    #         return False
 
     def disconnect(self) -> bool:
         try:
