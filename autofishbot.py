@@ -360,7 +360,7 @@ def autoBuff(session: DiscordWrapper, queries: list = []) -> None:
             try:
                 if receiver_ready:
                     session.request(command=query[0], options=query[1])
-                sleep(2)
+                sleep(3)
             except Exception as e:
                 notify(f'Failed to send query -> {e}', 'e')
         return None
