@@ -8,6 +8,9 @@ Auto Fishing Bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com
 - Auto Buff (more treasures + more fish)
 - Interactions (buttons and slash commands)
 
+## Notice
+Unknown ban detection method has been reported, please see [#38](https://github.com/thejoabo/virtualfisher-bot/issues/38). USE IT AT YOUR OWN RISK !
+
 ## Demo
 ![demo](assets/images/demo.gif)
 
