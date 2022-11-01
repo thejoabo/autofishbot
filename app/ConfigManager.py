@@ -4,6 +4,7 @@ from configparser import ConfigParser
 from os import getcwd, listdir
 from app.Util import debugger
 from re import sub
+from sys import argv
 
 
 #------------------------ CONSTANTS --------------------------#
@@ -135,6 +136,12 @@ class ConfigManager:
             exit(f'\n[!] User exited ({e}).')
     
     def choiceDialog(self) -> str:
+        if len(argv) >= 2:
+            index = int(argv[1])
+            if index > 0 and index <= len(self.configs):
+                return self.configs[index - 1]
+            else:
+                print(f'Invalid choice. {index} is outside the scope.')
         print(f'[!] Multiple configs detected in {CONFIG_PATH} folder.\nPlease choose:')
         for k, config in enumerate(self.configs):
             print(f'\t{k + 1} - "{config}"')
