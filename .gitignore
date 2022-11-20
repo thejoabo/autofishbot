@@ -1,7 +1,12 @@
-#feature testing / data dumps / configs
-tests/*
-backups/*
 
+# Development only
+html
+tests
+backups
+dumps
+app/*.json
+*.code-workspace
+assets/images/logo.png
 
 
 # Byte-compiled / optimized / DLL files
