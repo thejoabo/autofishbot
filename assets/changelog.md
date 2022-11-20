@@ -5,7 +5,7 @@
 ### **Fixed** -->
 ## experimental-2.0.0 - 11/20/22 (current)
 #### **Added**
-- added **Scheduler** class (#38) - experimental
+- added **Scheduler** class ([#38]([#38](https://github.com/thejoabo/autofishbot/issues/38))) - experimental
   - Allows slash commands to be sent using keybinds
   - Creates, controls and pseudo-randomizes automation routines (boosts and auto_* features) → attempts to mimic human behavior
   - Sporadically mid-session 'break time'
@@ -30,7 +30,7 @@
     - minor design changes ([see comparison](https://imgur.com/a/tsIcg5O))
     - better exceptions handling 
 - **ConfigManager** new features
-  - argument support for loading specific configs  (e.g. ```python autofishbot.py some_config_name```) (adaptation of @notvirtio 's solution #51)
+  - argument support for loading specific configs  (e.g. ```python autofishbot.py some_config_name```) (adaptation of @notvirtio 's solution [#51](https://github.com/thejoabo/autofishbot/pull/51))
   - support for the creation of new (alt) configs using arguments (```python autofishbot.py --create```)
   - new parameters:
     - Network: ```proxy_ip```, ```proxy_port```, ```proxy_auth_user```, ```proxy_auth_password```, ```user_agent```
@@ -56,7 +56,7 @@
     - simplification and better data structure
     - better handling of exceptions (and proper returns)
     - better error management to failure requests
-    - proper handling of discord's rate limits (429 error) (improvement of @gabeaventh 's solution #36)
+    - proper handling of discord's rate limits (429 error) (improvement of @gabeaventh 's solution [#36](https://github.com/thejoabo/autofishbot/pull/36))
 - refactored **Captcha** class
   - compartmentalization
   - multi-threading solving (asynchronous ocr-engine requests) → each engine request is made simultaneously, so captcha solving time is significantly faster.
@@ -101,7 +101,7 @@
 - fixed a bug in which the *sanitize* function in Message class couldn't parse some characters
 - fixed a bug in which  required fields weren't validated in ConfigManager (#48)
 - fixed a bug in which captcha.regen counter were redefined after solution failure
-- fixed a bug in which the bait name overlaps the border in compact mode - inventory (and related information) can be viewed separately on a popup using their respective keybinds (#50)
+- fixed a bug in which the bait name overlaps the border in compact mode - inventory (and related information) can be viewed separately on a popup using their respective keybinds ([#50]([#50](https://github.com/thejoabo/autofishbot/issues/50)))
 - fixed a bug in which the curses kept blinking on screen's last update position
 
 
