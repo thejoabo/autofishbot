@@ -109,7 +109,7 @@ The **BOOSTS_LENGTH** parameter stands for the **literal integer**  value (```5`
 
 # <h3 align='center'>MORE_FISH & MORE_TREASURES</h3><br>
 
-The **MORE_FISH** and **MORE_TREASURES** parameters stands for the **boolean** values used to enable the automatic sending of the '```/buy fish{BOOST_LENGTH}m```' and '```/buy treasure{BOOST_LENGTH}m```' command, respectively, every ~{BOOST_LENGTH} minutes (+/- variation). You can also use key binds to buy the More fish (default '**F**') and More treasures (default '**T**') boosts at any given time during or fishing session. However, if those values are set to ```True```, user arbitrary input will be restricted (since they are being controlled by the **Scheduler**).
+The **MORE_FISH** and **MORE_TREASURES** parameters stands for the **boolean** values used to enable the automatic sending of the '```/buy fish{BOOST_LENGTH}m```' and '```/buy treasure{BOOST_LENGTH}m```' command, respectively, every ~{BOOST_LENGTH} minutes (+/- variation). You can also use key binds to buy the More fish (default '**F**') and More treasures (default '**T**') boosts at any given time during your fishing session. However, if those values are set to ```True```, user arbitrary input will be restricted (since they are being controlled by the **Scheduler**).
 
 **Note**: as any other boost, you must meet the requirements for it to be successfully executed (6 Gold Fish for the 5 minutes boost and 6 Emerald Fish for the 20 minutes one).
 
@@ -121,7 +121,7 @@ The **FISH_ON_EXIT** parameter stands for the **boolean** value used to enable t
 
 # <h3 align='center'>AUTO_DAILY</h3><br>
 
-The **AUTO_DAILY** parameter stands for the **boolean** value used to enable the automatic sending of the '```/daily```' command (controlled by the **Scheduler**). This command can also be sending via key binds (default '**D**'), but its usage it's restricted by one use for each fishing session.
+The **AUTO_DAILY** parameter stands for the **boolean** value used to enable the automatic sending of the '```/daily```' command (controlled by the **Scheduler**). This command can also be sent via key binds (default '**D**'), but its usage it's restricted by one use for each fishing session.
 
 # <h3 align='center'>AUTO_BUY_BAITS</h3><br>
 
@@ -131,13 +131,13 @@ The **AUTO_BUY_BAITS** parameter stands for the **boolean** value used to enable
 
 # <h3 align='center'>AUTO_SELL</h3><br>
 
-The **AUTO_SELL** parameter stands for the **boolean** value used to enable the automatic sending of the '```/sell all```' command every ~8 minutes (+/- variation). You can also use key binds to sell your current inventory items (default '**s**') at any given time during or fishing session. 
+The **AUTO_SELL** parameter stands for the **boolean** value used to enable the automatic sending of the '```/sell all```' command every ~8 minutes (+/- variation). You can also use key binds to sell your current inventory items (default '**s**') at any given time during your fishing session. 
 
 **Note**: if the value is set to ```True```, and you manually sell your inventory (using key binds or via Discord) while the command is scheduled to be sent, the next automatic update will happen in ~8 minutes from the last manual update.
 
 # <h3 align='center'>AUTO_UPDATE_INVENTORY</h3><br>
 
-The **AUTO_UPDATE_INVENTORY** parameter stands for the **boolean** value used to enable the automatic sending of the '```/profile```' command every ~10 minutes (+/- variation). You can also use key binds to update your inventory (default '**I**') at any given time during or fishing session. 
+The **AUTO_UPDATE_INVENTORY** parameter stands for the **boolean** value used to enable the automatic sending of the '```/profile```' command every ~10 minutes (+/- variation). You can also use key binds to update your inventory (default '**I**') at any given time during your fishing session. 
 
 **Note**: if this value is to ```True```,  and you manually update your inventory (using key binds or via Discord) while the command is scheduled to be sent, the next automatic update will happen in ~10 minutes from the last manual update.
 
@@ -151,7 +151,7 @@ The **COMPACT_MODE** parameter stands for the **boolean** value which changes th
 
 The **REFRESH_RATE** parameter stands for the **float** value (ranging from ```0.1``` to ```1.0```)  used to set the refresh rate of your menu. By default,  it's set to ```0.3``` (seconds), which has a great balance between performance and usability.
 
-**Note**: for those who prefer leaving AFB running in the background, it's recommended to set the refresh rate to ```1.0``` seconds (to restrict as much as possible of CPU/Memory usage).
+**Note**: for those who prefer leaving AFB running in the background, it's recommended to set the refresh rate to ```1.0``` seconds (to restrict as much as possible CPU/Memory usage).
 
 # <h3 align='center'>BAIT</h3><br>
 

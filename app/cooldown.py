@@ -14,7 +14,7 @@ SIGMA = 0.12289
 Do NOT change Sigma value
 See: https://github.com/thejoabo/virtualfisher-bot/discussions/12
 '''
-MARGIN = uniform(0.1, 0.4)
+MARGIN = uniform(0.1, 0.35)
 '''
 The MARGIN constant is used to increase the overall cooldown in order 
 to reduce the values less than user's cooldown, maximizing performance 

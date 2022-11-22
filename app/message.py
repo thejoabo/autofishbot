@@ -47,7 +47,7 @@ class Message:
             if components != []:
                 for component in components[0]['components']:
                     try:
-                        if component['label'] in ['Fish Again', 'Fish']:
+                        if component['label'] in ['Fish Again']:
                             custom_id = component['custom_id']
                     except KeyError:
                         pass

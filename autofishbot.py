@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 #------------------------ IMPORTS --------------------------#
 from __future__ import annotations
 from app import *
@@ -364,13 +365,6 @@ if __name__ == "__main__":
         cmd, data = scheduler.commands.worker.data
         session.request(command=cmd, parameters=data)
         sleep(3)
-    # while True:
-    #     print('\n')
-    #     print(menu.rcv_streak, menu.rcv_bypasses, receiver.captcha.detected, menu.items, menu.current_notification)
-    #     print(receiver.message.id, receiver.message.play_id)
-    #     if receiver.captcha.detected:
-    #         print(receiver.captcha)
-    #     sleep(0.3)
-    #sleep(10)
+
     session.disconnect()
     exit(f'\n[!] User exited.')

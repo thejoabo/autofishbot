@@ -99,7 +99,7 @@
 - *autoBuff* function removed (integrated in **Scheduler** class)
 #### **Fixed**
 - fixed a bug in which the *sanitize* function in Message class couldn't parse some characters
-- fixed a bug in which  required fields weren't validated in ConfigManager (#48)
+- fixed a bug in which  required fields weren't validated in ConfigManager ([#48](https://github.com/thejoabo/autofishbot/issues/48))
 - fixed a bug in which captcha.regen counter were redefined after solution failure
 - fixed a bug in which the bait name overlaps the border in compact mode - inventory (and related information) can be viewed separately on a popup using their respective keybinds ([#50]([#50](https://github.com/thejoabo/autofishbot/issues/50)))
 - fixed a bug in which the curses kept blinking on screen's last update position

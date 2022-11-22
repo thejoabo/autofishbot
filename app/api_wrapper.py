@@ -388,14 +388,18 @@ class DiscordWrapper:
                 #Bad request
                 if status_code == 400:
                     response = loads(request.content)
+                    err_message = f'Code: {status_code}\nResponse: {response}\nRequest: {data}\nHeaders: {headers}'
+                    
                     if int(response['code']) == INVALID_FORM_BODY:
                         #Non critical, but send slash command instead
-                        #debug
-                        print(response)
+                        #debug - ax0
+                        print(err_message, '\nax0')
+                        debugger.log(err_message, 'ax0')
                         return False
                     else:
-                        #Critial, debbug and exit 
-                        exit(response)
+                        #Critial, debbug and exit - ax1
+                        debugger.log(err_message, 'ax1')
+                        exit(err_message + '\nax1')
                 
                 #Rate limits
                 elif status_code == 429:
@@ -412,8 +416,9 @@ class DiscordWrapper:
                         else:
                             #Global resource limitation (rare)
                             message = response['message']
-                            exit('[E] 429 (Global): ', message)
+                            exit('[E] 429 (Global): ', message, data)
                     except (KeyError, TypeError, ValueError) as e:
+                        debugger.log(e, f'{self.name} 429')
                         exit('[E] 429: ', e)
                 else:
                     #Gateway unavailable
@@ -422,6 +427,7 @@ class DiscordWrapper:
                     return False
             else:
                 #Critical, debug and exit  
+                debugger.log(data, f'{self.name} {status_code}')
                 exit(status_code)
         else:
             #201 and 204 - Successfull interactions

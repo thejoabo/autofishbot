@@ -37,7 +37,7 @@ class Captcha:
     _word_list: list[str] = field(init=False, repr=False)
     _raw_answers: list[str] = field(default_factory=list)
     _engines: list[int] = field(init=False, repr=False)
-    _max_timeout: int = field(default=15, repr=False)
+    _max_timeout: int = field(default=20, repr=False)
     _captcha_length: int = 6
     
     #Counters
