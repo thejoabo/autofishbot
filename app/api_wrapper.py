@@ -489,7 +489,7 @@ class DiscordWrapper:
 
             #Send identify event
             if not self.is_reconnecting:
-                print('[*] Loging in ...')
+                print('[*] Logging in ...')
             self.ws.send(dumps(self.passport))
             
             #Load the guild id
