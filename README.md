@@ -21,12 +21,12 @@ Auto fishing bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com
 (**With** Git) 
 - Using the terminal, type:
 ```bash
-git clone https://github.com/thejoabo/virtualfisher-bot.git
-cd virtualfisher-bot
+git clone https://github.com/thejoabo/autofishbot.git
+cd autofishbot
 python pip -m install -r requirements.txt
 ```
 (**Without** Git)
-- Download the repository [here](https://github.com/thejoabo/virtualfisher-bot/archive/refs/heads/main.zip)
+- Download the repository [here](https://github.com/thejoabo/autofishbot/archive/refs/heads/main.zip)
 - Extract the zip file
 - Open a terminal window in the extracted folder and type:
 ```bash
