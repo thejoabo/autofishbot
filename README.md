@@ -23,14 +23,14 @@ Auto fishing bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com
 ```bash
 git clone https://github.com/thejoabo/autofishbot.git
 cd autofishbot
-python pip -m install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 (**Without** Git)
 - Download the repository [here](https://github.com/thejoabo/autofishbot/archive/refs/heads/main.zip)
 - Extract the zip file
 - Open a terminal window in the extracted folder and type:
 ```bash
-python pip -m install -r requirements.txt
+python -m pip install -r requirements.txt
 ``` 
 ## Usage
 Using the terminal, **in the repository folder**, type:
