@@ -493,7 +493,8 @@ class DiscordWrapper:
             self.ws.send(dumps(self.passport))
             
             #Load the guild id
-            self.guild_id = self.load_guild_id()
+            if not self.guild_id:
+                self.guild_id = self.load_guild_id()
             
             self.is_ready = True
             if not self.is_reconnecting:
