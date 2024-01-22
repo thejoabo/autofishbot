@@ -191,7 +191,8 @@ class DiscordWrapper:
     commands: list[dict] = field(repr=False, default_factory=list)
     seq: int = None
     endpoints: ApiEndpoints = field(init=False, repr=False)
-
+    
+    device: str = field(init=False)
     #Network
     ws: WebSocket = field(init=False)
     user_agent: str = field(default=DEFAULT_USER_AGENT, repr=False)
@@ -215,6 +216,7 @@ class DiscordWrapper:
         self.user_token = self.config.user_token
         self.channel_id = self.config.channel_id
         self.guild_id = None 
+        self.set_random_device()
         
         #Network
         self.ws = WebSocket()
@@ -237,6 +239,8 @@ class DiscordWrapper:
         self.endpoints = ApiEndpoints(self.channel_id)
         self.commands = self.load_commands()
         
+        self.device = ""
+
         if self.auto_connect:
             self.connect()
     
@@ -259,6 +263,11 @@ class DiscordWrapper:
         inc = self.seq if self.seq else randint(0, 10**3)
         return int((time()) * 1000 - 1420070400000) * (1024 * 4096) + inc
     
+    def set_random_device(self):
+        # List of device values
+        device_values = ['iPhone 15 Pro', 'iPhone 15', 'iPhone 14', 'iPhone 13']
+        self.device = choice(device_values)
+
     @property
     def passport(self) -> dict:
         '''Returns the gateway identifier payload.'''
@@ -267,9 +276,19 @@ class DiscordWrapper:
             'd': {
                 'token': self.user_token,
                 'properties': {
-                    'os': uname().system,
-                    'browser': 'firefox',
-                    'device': 'pc'
+                    'os': 'iOS',
+                    'browser': 'Discord iOS',
+                    'device': self.device,
+                    'release_channel': 'stable',
+                    'client_version': '212.0',
+                    'os_version': '17.3',
+                    'os_arch': 'x64',
+                    'app_arch': 'ia32',
+                    'system_locale': 'en-US',
+                    'browser_version': '22.3.26',
+                    'client_build_number': 244874,
+                    'native_build_number': 39515,
+                    'design_id': 0,
                 },
                 'nonce': self.snowflake
             }
