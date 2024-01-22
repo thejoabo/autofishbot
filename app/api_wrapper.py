@@ -267,9 +267,9 @@ class DiscordWrapper:
             'd': {
                 'token': self.user_token,
                 'properties': {
-                    'os': uname().system,
-                    'browser': 'firefox',
-                    'device': 'pc'
+                    'os': 'iOS',
+                    'browser': 'Discord iOS',
+                    'device': 'iPhone 15 Pro'
                 },
                 'nonce': self.snowflake
             }
