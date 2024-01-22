@@ -278,7 +278,17 @@ class DiscordWrapper:
                 'properties': {
                     'os': 'iOS',
                     'browser': 'Discord iOS',
-                    'device': self.device
+                    'device': self.device,
+                    'release_channel': 'stable',
+                    'client_version': '212.0',
+                    'os_version': '17.3',
+                    'os_arch': 'x64',
+                    'app_arch': 'ia32',
+                    'system_locale': 'en-US',
+                    'browser_version': '22.3.26',
+                    'client_build_number': 244874,
+                    'native_build_number': 39515,
+                    'design_id': 0,
                 },
                 'nonce': self.snowflake
             }
