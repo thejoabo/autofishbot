@@ -3,6 +3,6 @@ charset-normalizer==2.1.1
 configparser==5.3.0
 idna==3.4
 requests==2.31.0
-urllib3==1.26.12
+urllib3==1.26.18
 websocket-client==1.4.2
 windows-curses==2.3.1 #Linux and Mac users, remove this line.
