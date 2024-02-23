@@ -279,7 +279,6 @@ class DiscordWrapper:
                     'os': 'iOS',
                     'browser': 'Discord iOS',
                     'system_locale': 'en-SG',
-                    'browser_version': '217.0',
                     'device': self.device,
                     'release_channel': 'stable',
                     'client_version': '212.0',
