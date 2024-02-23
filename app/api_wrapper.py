@@ -281,15 +281,15 @@ class DiscordWrapper:
                     'system_locale': 'en-SG',
                     'device': self.device,
                     'release_channel': 'stable',
-                    'client_version': '212.0',
-                    'os_version': '17.3',
+                    'client_version': '216.0',
+                    'os_version': '17.4',
                     'os_arch': 'x64',
                     'app_arch': 'ia32',
                     'referrer': '',
                     'referring_domain': '',
                     'referrer_current': '',
                     'referring_domain_current': '',
-                    'client_build_number': 267220,
+                    'client_build_number': 55496,
                 },
                 'nonce': self.snowflake
             }
