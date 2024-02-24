@@ -153,6 +153,7 @@ class Proxy:
 class ApiEndpoints:
     #Todo: refactor/remove this class
     channel_id: str = field(repr=False)
+    guild_id: str = field(repr=False)
     version: int = 10
     interactions: str = None
     application_commands: str = None
@@ -160,7 +161,7 @@ class ApiEndpoints:
     
     def __post_init__(self) -> None:
         object.__setattr__(self, 'interactions', f'https://discord.com/api/v{self.version}/interactions')
-        object.__setattr__(self, 'application_commands', f'https://discord.com/api/v{self.version}/channels/{self.channel_id}/application-commands/search?type=1&application_id={APPLICATION_ID}')
+        object.__setattr__(self, 'application_commands', f'https://discord.com/api/v{self.version}/guilds/{self.guild_id}/application-command-index')
         object.__setattr__(self, 'gateway', f'wss://gateway.discord.gg/?v={self.version}&encoding=json')
 
 
@@ -215,7 +216,7 @@ class DiscordWrapper:
         #User
         self.user_token = self.config.user_token
         self.channel_id = self.config.channel_id
-        self.guild_id = None 
+        self.guild_id = self.config.guild_id
         self.set_random_device()
         
         #Network
@@ -236,7 +237,7 @@ class DiscordWrapper:
         
         #Discord
         self.session_id = self.make_session()
-        self.endpoints = ApiEndpoints(self.channel_id)
+        self.endpoints = ApiEndpoints(self.channel_id, self.guild_id)
         self.commands = self.load_commands()
         
         self.device = ""
@@ -280,15 +281,12 @@ class DiscordWrapper:
                     'browser': 'Discord iOS',
                     'device': self.device,
                     'release_channel': 'stable',
-                    'client_version': '212.0',
+                    'client_version': '217.0',
                     'os_version': '17.3',
                     'os_arch': 'x64',
                     'app_arch': 'ia32',
                     'system_locale': 'en-US',
-                    'browser_version': '22.3.26',
-                    'client_build_number': 244874,
-                    'native_build_number': 39515,
-                    'design_id': 0,
+                    'client_build_number': 55497,
                 },
                 'nonce': self.snowflake
             }
@@ -470,8 +468,12 @@ class DiscordWrapper:
         '''Searchs for the application commands from a given channel.'''
         #Todo: make this class dynamically create commands (currently at scheduler)
         try:
+            #This request will retrieve the whole list of commands according to the discord newest api update
             content = self.request(endpoint=self.endpoints.application_commands, method='get')
-            return content['application_commands']
+            
+            #This line will filter out commands that doesnt belong to VF
+            content = [obj for obj in content['application_commands'] if obj["application_id"] == APPLICATION_ID]
+            return content
         except Exception as e:
             debugger.log(e, f'{self.name} - load_commands')
             return []
