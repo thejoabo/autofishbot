@@ -37,6 +37,7 @@ class ConfigManager:
     user_token: str = ''
     user_cooldown: float = 3.5
     channel_id: str = ''
+    guild_id: str = ''
     debug: bool = False
     config_path: str = './configs/'
     
@@ -115,6 +116,7 @@ class ConfigManager:
             self.user_token = self.to_str(system['user_token'], field='USER_TOKEN')
             self.user_cooldown = self.to_float(system['user_cooldown'], field='USER_COOLDOWN')
             self.channel_id = self.to_str(system['channel_id'], field='CHANNEL_ID')
+            self.guild_id = self.to_str(system['guild_id'], field='GUILD_ID')
             self.debug = self.to_bool(system['debug'])
             
             #Captcha
@@ -162,6 +164,7 @@ class ConfigManager:
             'user_token': self.user_token,
             'user_cooldown': self.user_cooldown,
             'channel_id': self.channel_id,
+            'guild_id': self.guild_id,
             'debug': self.debug
         }
         
