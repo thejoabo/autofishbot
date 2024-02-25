@@ -281,7 +281,6 @@ class DiscordWrapper:
                     'browser': 'Discord iOS',
                     'release_channel': 'stable',
                     'device': self.device,
-                    'release_channel': 'stable',
                     'client_version': '217.0',
                     'os_version': '17.4',
                     'os_arch': 'x64',
