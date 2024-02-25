@@ -286,7 +286,7 @@ class DiscordWrapper:
                     'os_version': '17.4',
                     'os_arch': 'x64',
                     'app_arch': 'ia32',
-                    'system_locale': 'en-SG',
+                    'system_locale': 'en-US',
                     'referrer': '',
                     'referring_domain': '',
                     'referrer_current': '',
