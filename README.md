@@ -1,3 +1,5 @@
+**Due to time limitations, this project is no longer active/maintained. Feel free to fork it and make improvements.**
+
 # AFB - Autofishbot
 Auto fishing bot made in Python 3 for [Virtual Fisher](https://virtualfisher.com/) Discord bot.
 
